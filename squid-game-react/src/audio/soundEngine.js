@@ -73,18 +73,26 @@ export function startBeat(windowMs = 10000) {
 
   const step = () => {
     if (isMuted) return;
-    const t = Math.min(1, (Date.now() - startTime) / windowMs);
+    const elapsed = Date.now() - startTime;
+    if (elapsed >= windowMs) {
+      stopBeat();
+      return;
+    }
+    const t = Math.min(1, elapsed / windowMs);
     beep(MOTIF[motifIndex % MOTIF.length] * (1 + t * 0.12), 0.16, 0.12, 'triangle');
     motifIndex++;
     // Tempo accelerates as time runs out — builds crowd tension
-    const interval = Math.max(120, 420 - t * 300);
+    const interval = Math.max(140, 450 - t * 300);
     beatTimer = setTimeout(step, interval);
   };
   step();
 }
 
 export function stopBeat() {
-  if (beatTimer) { clearTimeout(beatTimer); beatTimer = null; }
+  if (beatTimer) {
+    clearTimeout(beatTimer);
+    beatTimer = null;
+  }
 }
 
 export function say(text) {

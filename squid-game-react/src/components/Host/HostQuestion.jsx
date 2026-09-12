@@ -131,7 +131,7 @@ export default function HostQuestion({ question, roundNum, totalRounds, isReviva
       </div>
 
       <div className="hq-timer-row">
-        <TimerRing totalSeconds={GREEN_DURATION_SECS} />
+        <TimerRing key={question?.id || roundNum} totalSeconds={GREEN_DURATION_SECS} resetKey={question?.id || roundNum} />
         {armed && <span className="armed-pill">⚡ ARMED</span>}
       </div>
 

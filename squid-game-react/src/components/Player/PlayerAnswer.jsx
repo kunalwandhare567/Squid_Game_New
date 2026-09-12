@@ -79,7 +79,7 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
       )}
 
       {/* Timer — only during green */}
-      {!locked && <TimerRing totalSeconds={GREEN_DURATION_SECS} />}
+      {!locked && <TimerRing key={question?.id || roundKey} totalSeconds={GREEN_DURATION_SECS} resetKey={question?.id || roundKey} />}
 
       <h2 className="question-text">{question.text}</h2>
 

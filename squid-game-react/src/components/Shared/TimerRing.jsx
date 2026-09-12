@@ -2,22 +2,28 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const CIRCUMFERENCE = 2 * Math.PI * 44; // r=44
 
-export default function TimerRing({ totalSeconds = 10 }) {
+export default function TimerRing({ totalSeconds = 10, resetKey }) {
   const [secsLeft, setSecsLeft] = useState(totalSeconds);
   const startRef = useRef(Date.now());
   const rafRef   = useRef(null);
 
   useEffect(() => {
     startRef.current = Date.now();
+    setSecsLeft(totalSeconds);
+
     const tick = () => {
       const elapsed   = (Date.now() - startRef.current) / 1000;
       const remaining = Math.max(0, totalSeconds - elapsed);
       setSecsLeft(remaining);
-      if (remaining > 0) rafRef.current = requestAnimationFrame(tick);
+      if (remaining > 0) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [totalSeconds]);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [totalSeconds, resetKey]);
 
   const fraction = secsLeft / totalSeconds;
   const offset   = CIRCUMFERENCE * (1 - fraction);

@@ -1,5 +1,5 @@
 // =====================================================================
-// GameContext.jsx — Supabase sync brain. Realtime channel listeners.
+// GameContext.jsx — Supabase sync brain. Realtime channel + polling fallback.
 // Debounced lobby updates prevent rapid DOM flicker on mass joins.
 // =====================================================================
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
@@ -44,17 +44,18 @@ export function GameProvider({ roomCode, children }) {
   useEffect(() => {
     if (!roomCode) return;
 
-    // 1. Initial fetch from Supabase
-    async function fetchInitial() {
+    let isMounted = true;
+
+    // Helper: Sync latest room & player state from Supabase
+    async function syncState() {
       try {
-        // Fetch room info
         const { data: roomData } = await supabase
           .from('rooms')
           .select('*')
           .eq('room_code', roomCode)
           .maybeSingle();
 
-        if (roomData) {
+        if (roomData && isMounted) {
           const metaObj = {
             phase: roomData.phase,
             qIndex: roomData.q_index,
@@ -66,13 +67,12 @@ export function GameProvider({ roomCode, children }) {
           dispatch({ type: 'SET_QUESTION', payload: roomData.question || null });
         }
 
-        // Fetch players
         const { data: playersList } = await supabase
           .from('players')
           .select('*')
           .eq('room_code', roomCode);
 
-        if (playersList) {
+        if (playersList && isMounted) {
           const pMap = {};
           playersList.forEach(p => {
             pMap[p.player_id] = {
@@ -94,13 +94,17 @@ export function GameProvider({ roomCode, children }) {
           dispatch({ type: 'SET_PLAYERS', payload: pMap });
         }
       } catch (err) {
-        console.error('Error fetching initial game state from Supabase:', err);
+        console.error('Error syncing game state from Supabase:', err);
       }
     }
 
-    fetchInitial();
+    // 1. Initial immediate sync
+    syncState();
 
-    // 2. Realtime Channel Subscription
+    // 2. High-reliability Polling Fallback (ensures mobile clients never miss phase transitions)
+    const pollInterval = setInterval(syncState, 1200);
+
+    // 3. Instant Realtime Channel Subscription
     const channel = supabase
       .channel(`game-room-${roomCode}`)
       .on(
@@ -108,7 +112,7 @@ export function GameProvider({ roomCode, children }) {
         { event: '*', schema: 'public', table: 'rooms', filter: `room_code=eq.${roomCode}` },
         payload => {
           const row = payload.new;
-          if (!row) return;
+          if (!row || !isMounted) return;
           const metaObj = {
             phase: row.phase,
             qIndex: row.q_index,
@@ -125,6 +129,7 @@ export function GameProvider({ roomCode, children }) {
         { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${roomCode}` },
         payload => {
           const { eventType, new: newRow, old: oldRow } = payload;
+          if (!isMounted) return;
           clearTimeout(debounce.current);
 
           debounce.current = setTimeout(() => {
@@ -149,12 +154,14 @@ export function GameProvider({ roomCode, children }) {
             }
             playersCache.current = current;
             dispatch({ type: 'SET_PLAYERS', payload: current });
-          }, 150);
+          }, 100);
         }
       )
       .subscribe();
 
     return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
       clearTimeout(debounce.current);
     };

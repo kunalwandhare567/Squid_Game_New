@@ -38,17 +38,26 @@ function PlayerController({ roomCode }) {
 
   const isEliminated = me ? (!me.alive && !me.spectator) : false;
 
-  // React to phase audio cues
+  // Reset answer selection whenever a new question is loaded
+  useEffect(() => {
+    setMyChoiceId(null);
+  }, [question?.id]);
+
+  // Manage round audio cues and ensure beats stop when phase transitions
   useEffect(() => {
     if (!joined) return;
+
     if (phase === 'question' || phase === 'revival') {
-      setMyChoiceId(null);
+      audio.stopBeat();
       audio.startBeat(10000);
-    }
-    if (phase === 'locked' || phase === 'reveal' || phase === 'gameover') {
+    } else {
       audio.stopBeat();
     }
-  }, [phase, joined]);
+
+    return () => {
+      audio.stopBeat();
+    };
+  }, [phase, question?.id, joined]);
 
   function handleJoined({ isSpectator }) {
     audio.ensureAC();
@@ -72,6 +81,7 @@ function PlayerController({ roomCode }) {
     } else {
       content = (
         <PlayerAnswer
+          key={question?.id || 'rev'}
           roomCode={roomCode} pid={pid}
           question={question} locked={false}
           me={me} roundKey="rev"
@@ -86,6 +96,7 @@ function PlayerController({ roomCode }) {
   } else if (phase === 'question' || phase === 'locked') {
     content = (
       <PlayerAnswer
+        key={question?.id || `r${meta.qIndex ?? 0}`}
         roomCode={roomCode} pid={pid}
         question={question} locked={phase === 'locked'}
         me={me} roundKey={`r${meta.qIndex ?? 0}`}

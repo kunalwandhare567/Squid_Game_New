@@ -15,7 +15,7 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
   const bots        = playerList.filter(([, p]) => p.bot);
   const realCount   = realPlayers.length;
   const totalCount  = realCount + botCount;
-  const canStart    = totalCount >= 1;
+  const canStart    = totalCount >= MIN_PLAYERS;
   const isFull      = realCount >= MAX_PLAYERS;
 
   // Handle playing video with 3-second pause between replay cycles
@@ -138,7 +138,7 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
                   Start Game · {totalCount} Playing
                 </>
               ) : (
-                'Waiting for players to join…'
+                `Waiting for min ${MIN_PLAYERS} players (currently ${totalCount}/${MAX_PLAYERS})…`
               )}
             </button>
           </div>

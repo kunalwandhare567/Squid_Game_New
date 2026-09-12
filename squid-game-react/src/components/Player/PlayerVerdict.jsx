@@ -3,6 +3,7 @@ import { useAudio } from '../../context/AudioContext';
 import ConfettiCanvas from '../Shared/ConfettiCanvas';
 import DollSvg from '../Shared/DollSvg';
 import { CheckCircle, XCircle, AlertTriangle, Skull, Award, HelpCircle } from 'lucide-react';
+import { REVIVE_AFTER_ROUND } from '../../utils/ruleEngine';
 
 export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode }) {
   const audio = useAudio();
@@ -129,7 +130,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
           <span className="rev-icon">⭐</span>
           <div>
             <strong>Revival Round Coming Soon!</strong>
-            <p>Eliminated players get a chance to re-enter the game after Round 4. Stay tuned!</p>
+            <p>Eliminated players get a chance to re-enter the game after Round {REVIVE_AFTER_ROUND}. Stay tuned!</p>
           </div>
         </div>
       </div>

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Award, Shield, Zap, Skull, CheckCircle, HelpCircle, ArrowRight } from 'lucide-react';
+import { REVIVE_AFTER_ROUND } from '../../utils/ruleEngine';
 
 const COLORS  = ['#ff2d78','#3aa0ff','#f7b733','#57d38c'];
 const LETTERS = ['A','B','C','D'];
 
 export default function HostReveal({ results, eliminations, survivors, question, answers, roundNum, totalRounds, onNext }) {
   const isLast = roundNum >= totalRounds || survivors.length <= 1;
-  const isRevivalComing = roundNum === 4 && eliminations.length > 0;
+  const isRevivalComing = roundNum === REVIVE_AFTER_ROUND && eliminations.length > 0;
 
   const correctId = question?.correctId || 'opt_A';
   const correctIndex = ['opt_A', 'opt_B', 'opt_C', 'opt_D'].indexOf(correctId);
@@ -138,7 +139,7 @@ export default function HostReveal({ results, eliminations, survivors, question,
           {isLast ? (
             <>🏆 Crown Champion Podium →</>
           ) : isRevivalComing ? (
-            <>⭐ Start Revival Round (Round 4) →</>
+            <>⭐ Start Revival Round (Round {REVIVE_AFTER_ROUND}) →</>
           ) : (
             <>Next Round (Round {roundNum + 1} / {totalRounds}) →</>
           )}

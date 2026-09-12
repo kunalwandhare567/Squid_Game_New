@@ -8,10 +8,10 @@ export const SPEED_BONUS_MAX        = 3;
 export const BONUS_WINDOW_MS        = 10000; // 10s window (5s green + 5s blink)
 export const ELIM_RATIO             = 4;      // bottom 1-in-4 eliminated
 export const CONSECUTIVE_WRONG_LIMIT = 2;     // 2 consecutive wrong = eliminate
-export const MIN_PLAYERS            = 1;
-export const MAX_PLAYERS            = 600;    // Scaled for 400-500+ players
+export const MIN_PLAYERS            = 5;      // min 5 players to start
+export const MAX_PLAYERS            = 15;     // max 15 active players
 export const ROUNDS                 = 7;
-export const REVIVE_AFTER_ROUND     = 4;      // revival after round 4
+export const REVIVE_AFTER_ROUND     = 2;      // revival round after round 2
 export const REVIVE_MAX             = 3;      // up to 3 can rejoin
 export const GREEN_DURATION_SECS    = 10;     // 10s question countdown (5s green + 5s blink)
 export const GRACE_PERIOD_MS        = 1200;   // wait after lock before reading answers

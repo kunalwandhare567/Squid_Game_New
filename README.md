@@ -2,7 +2,7 @@
 
 [![React 19](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Firebase](https://img.shields.io/badge/Firebase-Realtime_DB-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Realtime_Postgres-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 > A high-stakes, real-time multiplayer AI trivia battle inspired by *Squid Game's "Red Light, Green Light"*. Built for live interactive events, hackathons, and classroom competitions.
@@ -40,7 +40,7 @@ Wrong answers or running out of time during **Red Light** result in instant elim
   - Includes full explanations ("Why?") shown after every round.
 
 - ⚡ **Real-Time Synchronization**:
-  - Powered by **Firebase Realtime Database** for sub-second synchronization between Host and dozens of concurrent mobile players.
+  - Powered by **Supabase Realtime (PostgreSQL)** for sub-second synchronization between Host and dozens of concurrent mobile players.
 
 - 🎵 **Procedural Web Audio Synthesizer**:
   - Built-in sound engine powered by the Web Audio API (no external sound file dependencies required).
@@ -61,70 +61,80 @@ Wrong answers or running out of time during **Red Light** result in instant elim
 |---|---|
 | **Frontend Framework** | React 19 + Vite |
 | **Styling** | Custom Vanilla CSS (Dark Cyberpunk / Squid Game Neon aesthetic) |
-| **Realtime Backend** | Firebase Realtime Database |
+| **Realtime Backend** | Supabase (PostgreSQL + Realtime Channels) |
 | **Icons** | Lucide React |
 | **QR Code Engine** | `qrcode.react` |
 | **Visual Effects** | `canvas-confetti` |
 | **Audio** | Native HTML5 Web Audio API Synth Engine |
-| **Deployment** | Netlify / Vercel / Firebase Hosting |
-
-### System Requirements
-- **Node.js**: `v18.0.0` or higher (Node `v20+` recommended)
-- **npm**: `v9.0.0` or higher (or `yarn` / `pnpm`)
-- Modern web browser (Chrome, Edge, Safari, Firefox) with Web Audio and JavaScript enabled.
+| **Deployment** | Netlify / Vercel / Cloudflare Pages |
 
 ---
 
-## 📁 Repository Structure
+## 🗄️ Supabase Database Setup
 
-```text
-Squid_game/
-├── README.md                      # Workspace & Project documentation
-├── .gitignore                     # Git ignore rules for root
-├── vid/                           # Demonstration recordings and assets
-│   └── vid1.mp4
-└── squid-game-react/              # React frontend application
-    ├── index.html                 # App entry HTML
-    ├── vite.config.js             # Vite build configuration
-    ├── package.json               # Dependencies and scripts
-    ├── netlify.toml               # Netlify SPA redirect & deployment config
-    ├── .env.example               # Firebase environment variable template
-    ├── .gitignore                 # React app gitignore
-    ├── public/                    # Static public assets
-    └── src/
-        ├── App.jsx                # Main URL router (?host=true / ?room=ABCD)
-        ├── main.jsx               # React DOM root
-        ├── index.css              # Global styles & design system
-        ├── firebase.js            # Firebase client initialization
-        ├── audio/
-        │   └── soundEngine.js     # Web Audio API procedural sound synthesizer
-        ├── context/
-        │   └── AudioContext.jsx   # Sound state management provider
-        ├── data/
-        │   └── questions.js       # 150+ curated AI trivia questions
-        ├── hooks/
-        │   └── usePlayerSession.js# LocalStorage & Firebase session hook
-        ├── utils/
-        │   └── ruleEngine.js      # Game state transitions & score calculation
-        └── components/
-            ├── Host/              # Host projector screens
-            │   ├── HostApp.jsx
-            │   ├── HostLobby.jsx
-            │   ├── HostQuestion.jsx
-            │   ├── HostReveal.jsx
-            │   ├── HostRevival.jsx
-            │   └── HostPodium.jsx
-            ├── Player/            # Mobile player screens
-            │   ├── PlayerApp.jsx
-            │   ├── PlayerJoin.jsx
-            │   ├── PlayerWait.jsx
-            │   ├── PlayerAnswer.jsx
-            │   ├── PlayerVerdict.jsx
-            │   ├── PlayerRevival.jsx
-            │   ├── PlayerSpectate.jsx
-            │   └── PlayerEnd.jsx
-            └── Shared/            # Reusable UI widgets (QRDisplay, etc.)
-                └── QRDisplay.jsx
+Run this SQL snippet in your **Supabase Project -> SQL Editor**:
+
+```sql
+-- 1. Rooms table
+CREATE TABLE IF NOT EXISTS rooms (
+    room_code TEXT PRIMARY KEY,
+    phase TEXT DEFAULT 'lobby',
+    q_index INT DEFAULT 0,
+    question JSONB DEFAULT NULL,
+    meta JSONB DEFAULT '{}'::jsonb,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Players table
+CREATE TABLE IF NOT EXISTS players (
+    room_code TEXT REFERENCES rooms(room_code) ON DELETE CASCADE,
+    player_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    alive BOOLEAN DEFAULT true,
+    spectator BOOLEAN DEFAULT false,
+    score INT DEFAULT 0,
+    strikes INT DEFAULT 0,
+    consecutive_wrong INT DEFAULT 0,
+    shield INT DEFAULT 1,
+    dd INT DEFAULT 1,
+    join_order INT DEFAULT 1,
+    bot BOOLEAN DEFAULT false,
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (room_code, player_id)
+);
+
+-- 3. Answers table
+CREATE TABLE IF NOT EXISTS answers (
+    room_code TEXT REFERENCES rooms(room_code) ON DELETE CASCADE,
+    round_key TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    choice_id TEXT NOT NULL,
+    shield_on BOOLEAN DEFAULT false,
+    dd_on BOOLEAN DEFAULT false,
+    submitted_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (room_code, round_key, player_id)
+);
+
+-- 4. Enable Row Level Security (RLS) policies for multiplayer access
+ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read on rooms" ON rooms FOR SELECT USING (true);
+CREATE POLICY "Allow public all on rooms" ON rooms FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public read on players" ON players FOR SELECT USING (true);
+CREATE POLICY "Allow public all on players" ON players FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public read on answers" ON answers FOR SELECT USING (true);
+CREATE POLICY "Allow public all on answers" ON answers FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. Enable Realtime Publications
+ALTER PUBLICATION supabase_realtime ADD TABLE rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE players;
+ALTER PUBLICATION supabase_realtime ADD TABLE answers;
 ```
 
 ---
@@ -144,34 +154,13 @@ cd Squid_game/squid-game-react
 npm install
 ```
 
-### 3. Setup Firebase Realtime Database
+### 3. Setup Environment Variables
 
-1. Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
-2. Under **Build**, select **Realtime Database** and click **Create Database**.
-3. Set your Realtime Database Security Rules for public read/write during development:
-   ```json
-   {
-     "rules": {
-       ".read": true,
-       ".write": true
-     }
-   }
-   ```
-4. Copy your web app's Firebase credentials into a new `.env` file inside `squid-game-react/`:
+Create `.env` inside `squid-game-react/`:
 
-```bash
-cp .env.example .env
-```
-
-5. Fill in your `.env` variables:
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_DATABASE_URL=https://your_project-default-rtdb.firebaseio.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
 ```
 
 ### 4. Run Development Server
@@ -187,32 +176,21 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 ## 🎯 How to Play
 
 ### Host Workflow
-1. Open `http://localhost:5173?host=true` on your main laptop/projector display.
-2. A unique 4-letter Room Code (e.g. `SQUID`) and QR Code will be generated automatically.
+1. Open `http://localhost:5173?host=true` on your main display.
+2. A unique 4-letter Room Code and QR Code will be generated.
 3. Wait for players to join the lobby.
 4. Click **Start Game** to trigger the countdown and begin Round 1.
 5. Control question pacing, reveal answers, view eliminations, and crown the winner on the podium!
 
 ### Player Workflow
-1. Scan the QR code displayed on the host screen, or visit `http://localhost:5173` and enter the 4-letter Room Code.
+1. Scan the QR code displayed on the host screen, or visit the URL and enter the 4-letter Room Code.
 2. Enter your nickname and avatar.
 3. When the question begins (**Green Light**), choose your answer before time runs out.
-4. If you answer correctly, you advance to the next round. If incorrect, you enter Spectator mode or fight for survival in the Revival Round.
-
----
-
-## 🌐 Production Deployment
-
-### Deploy on Netlify (Recommended)
-This repository includes a [`netlify.toml`](squid-game-react/netlify.toml) configured for single-page routing:
-1. Connect your GitHub repository to [Netlify](https://www.netlify.com/).
-2. Set the **Base directory** to `squid-game-react`.
-3. Set the **Build command** to `npm run build`.
-4. Set the **Publish directory** to `squid-game-react/dist`.
-5. Add your `VITE_FIREBASE_*` environment variables in the Netlify dashboard under **Site configuration > Environment variables**.
+4. If you answer correctly, you advance. If eliminated, fight for survival in the Revival Round!
 
 ---
 
 ## 📜 License
 
 This project is open source and available under the [MIT License](LICENSE).
+  

@@ -7,8 +7,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('firebase')) {
-            return 'firebase';
+          if (id.includes('@supabase')) {
+            return 'supabase';
           }
           if (id.includes('qrcode.react')) {
             return 'qrcode';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { db, ref, set, get, serverTimestamp, remove } from '../../firebase';
+import { supabase } from '../../supabase';
 import { MAX_PLAYERS } from '../../utils/ruleEngine';
 import DollSvg from '../Shared/DollSvg';
 
@@ -20,43 +20,69 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
     setError('');
 
     try {
-      // Check if game has started (cannot join mid-game as player)
-      const metaSnap = await get(ref(db, `rooms/${roomCode}/meta`));
-      const meta = metaSnap.val();
-      if (!meta) { setError('Room not found. Check the room code.'); setJoining(false); return; }
-      if (!['lobby'].includes(meta.phase) && meta.phase !== 'lobby') {
-        // Game already started — join as spectator only
+      // 1. Check room exists in Supabase
+      const { data: roomData, error: roomErr } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('room_code', roomCode)
+        .maybeSingle();
+
+      if (roomErr || !roomData) {
+        setError('Room not found. Check the room code on the host screen.');
+        setJoining(false);
+        return;
       }
 
-      // Count real players — atomic check before writing
-      const playersSnap = await get(ref(db, `rooms/${roomCode}/players`));
-      const currentPlayers = playersSnap.val() || {};
-      const realCount = Object.values(currentPlayers).filter(p => !p.bot && !p.spectator).length;
-      const isSpectator = realCount >= MAX_PLAYERS || !['lobby'].includes(meta.phase);
+      // 2. Count existing real players
+      const { data: playersList } = await supabase
+        .from('players')
+        .select('player_id, bot, spectator')
+        .eq('room_code', roomCode);
 
+      const realCount = (playersList || []).filter(p => !p.bot && !p.spectator).length;
+      const isSpectator = realCount >= MAX_PLAYERS || !['lobby'].includes(roomData.phase);
       const joinOrder = realCount + 1;
+
       const playerRecord = {
-        name: trimmed, emoji,
+        room_code: roomCode,
+        player_id: pid,
+        name: trimmed,
+        emoji,
         alive: !isSpectator,
         spectator: isSpectator,
-        score: 0, strikes: 0, consecutiveWrong: 0,
-        shield: 1, dd: 1,
-        joinOrder,
-        joinedAt: serverTimestamp(),
+        score: 0,
+        strikes: 0,
+        consecutive_wrong: 0,
+        shield: 1,
+        dd: 1,
+        join_order: joinOrder,
         bot: false,
+        joined_at: new Date().toISOString(),
       };
 
-      await set(ref(db, `rooms/${roomCode}/players/${pid}`), playerRecord);
+      const { error: insertErr } = await supabase.from('players').upsert(playerRecord);
+      if (insertErr) {
+        console.error('Join insert error:', insertErr);
+        setError('Failed to join room. Please try again.');
+        setJoining(false);
+        return;
+      }
 
-      // Auto-remove on disconnect (cleans up ghost players)
-      // Note: onDisconnect requires compat SDK; for modular we use beforeunload
+      // Auto cleanup on disconnect / tab close
       window.addEventListener('beforeunload', () => {
-        // Best-effort cleanup
-        remove(ref(db, `rooms/${roomCode}/players/${pid}`)).catch(() => {});
+        supabase.from('players').delete().eq('room_code', roomCode).eq('player_id', pid);
       });
 
-      onJoined({ isSpectator, playerRecord });
+      onJoined({
+        isSpectator,
+        playerRecord: {
+          id: pid,
+          ...playerRecord,
+          consecutiveWrong: 0,
+        },
+      });
     } catch (err) {
+      console.error(err);
       setError('Connection error. Please try again.');
       setJoining(false);
     }

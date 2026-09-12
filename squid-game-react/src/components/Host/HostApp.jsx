@@ -1,9 +1,9 @@
 // =====================================================================
 // HostApp.jsx — Host root component. Manages all game phases and
-// Firebase writes. This is the authoritative game controller.
+// Supabase writes. This is the authoritative game controller.
 // =====================================================================
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { db, ref, set, update, get, onValue, off, serverTimestamp, remove } from '../../firebase';
+import { supabase } from '../../supabase';
 import { useAudio } from '../../context/AudioContext';
 import { GameProvider, useGame } from '../../context/GameContext';
 import {
@@ -36,7 +36,7 @@ function HostController({ roomCode }) {
   const { state } = useGame();
   const audio = useAudio();
 
-  // ── Host-only state (not in Firebase) ─────────────────────────────────
+  // ── Host-only state ───────────────────────────────────────────────────
   const [phase,        setPhase]        = useState('lobby');
   const [gameQuestions, setGameQuestions] = useState([]);
   const [roundIndex,   setRoundIndex]   = useState(0);
@@ -50,7 +50,6 @@ function HostController({ roomCode }) {
   const [greenStartAt, setGreenStartAt] = useState(0);
   const [hostLight,    setHostLight]    = useState('green');
 
-  const rootRef   = useRef(null);
   const lockGuard = useRef(false); // prevents double-lockIn
   const answersRef= useRef({});
   const botSeq    = useRef(0);
@@ -58,34 +57,55 @@ function HostController({ roomCode }) {
 
   const joinURL = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
 
-  // ── Initialise Firebase room ───────────────────────────────────────────
+  // ── Initialise Supabase room ──────────────────────────────────────────
   useEffect(() => {
     audio.ensureAC();
-    const root = ref(db, `rooms/${roomCode}`);
-    rootRef.current = root;
 
-    set(ref(db, `rooms/${roomCode}/meta`), {
-      phase: 'lobby', qIndex: 0, roomCode,
-      hostAlive: true, maxPlayers: MAX_PLAYERS, minPlayers: MIN_PLAYERS,
-    });
+    async function initRoom() {
+      await supabase.from('rooms').upsert({
+        room_code: roomCode,
+        phase: 'lobby',
+        q_index: 0,
+        meta: {
+          hostAlive: true,
+          maxPlayers: MAX_PLAYERS,
+          minPlayers: MIN_PLAYERS,
+        },
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
 
-    // Auto-set hostAlive=false when tab closes
-    // (requires firebase compat for onDisconnect — using simple set for now)
-    return () => {
-      // Cleanup room on component unmount
-      // remove(root);
-    };
+    initRoom();
   }, [roomCode]);
 
   // ── Listen to live answers during question phase ───────────────────────
   useEffect(() => {
     if (phase !== 'question' && phase !== 'revival') return;
     const rkey = isRevival ? 'rev' : `r${roundIndex}`;
-    const answersDbRef = ref(db, `rooms/${roomCode}/answers/${rkey}`);
-    const unsub = onValue(answersDbRef, snap => {
-      answersRef.current = snap.val() || {};
-    });
-    return () => off(answersDbRef, 'value', unsub);
+
+    const channel = supabase
+      .channel(`answers-${roomCode}-${rkey}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'answers', filter: `room_code=eq.${roomCode}` },
+        payload => {
+          const row = payload.new;
+          if (row && row.round_key === rkey) {
+            answersRef.current[row.player_id] = {
+              choiceId: row.choice_id,
+              submittedAt: row.submitted_at ? new Date(row.submitted_at).getTime() : Date.now(),
+              shieldOn: !!row.shield_on,
+              ddOn: !!row.dd_on,
+            };
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [phase, roundIndex, isRevival, roomCode]);
 
   // ── Helper: get players as array ──────────────────────────────────────
@@ -103,13 +123,21 @@ function HostController({ roomCode }) {
     const id = `bot_${n}`;
     botIds.current.add(id);
     const rec = {
+      room_code: roomCode,
+      player_id: id,
       name: BOT_NAMES[n % BOT_NAMES.length] + '_Bot',
       emoji: EMOJIS[n % EMOJIS.length],
-      alive: true, spectator: false, score: 0, strikes: 0,
-      consecutiveWrong: 0, shield: 1, dd: 1,
-      joinOrder: 99 + n, bot: true,
+      alive: true,
+      spectator: false,
+      score: 0,
+      strikes: 0,
+      consecutive_wrong: 0,
+      shield: 1,
+      dd: 1,
+      join_order: 99 + n,
+      bot: true,
     };
-    await set(ref(db, `rooms/${roomCode}/players/${id}`), rec);
+    await supabase.from('players').upsert(rec);
     setBotCount(c => c + 1);
   }
 
@@ -118,7 +146,7 @@ function HostController({ roomCode }) {
     if (!ids.length) return;
     const id = ids[ids.length - 1];
     botIds.current.delete(id);
-    await remove(ref(db, `rooms/${roomCode}/players/${id}`));
+    await supabase.from('players').delete().eq('room_code', roomCode).eq('player_id', id);
     setBotCount(c => Math.max(0, c - 1));
   }
 
@@ -141,24 +169,35 @@ function HostController({ roomCode }) {
     setIsRevival(revival);
     answersRef.current = {};
 
-    // Write question WITHOUT correctId (anti-cheat)
-    await set(ref(db, `rooms/${roomCode}/question`), {
-      id: q.id, text: q.text, options: q.options,
-      correctId: null, // hidden until reveal
-      why: q.why, revival: !!revival,
-    });
+    const nowIso = new Date().toISOString();
+    const nowMs = Date.now();
+    setGreenStartAt(nowMs);
 
-    // Write meta — capture server timestamp
-    await set(ref(db, `rooms/${roomCode}/meta`), {
+    // Update room in Supabase (WITHOUT correctId for anti-cheat)
+    await supabase.from('rooms').upsert({
+      room_code: roomCode,
       phase: revival ? 'revival' : 'question',
-      qIndex: idx, rkey, roomCode, hostAlive: true,
-      maxPlayers: MAX_PLAYERS, minPlayers: MIN_PLAYERS,
-      startedAt: serverTimestamp(),
+      q_index: idx,
+      question: {
+        id: q.id,
+        text: q.text,
+        options: q.options,
+        correctId: null, // hidden until reveal
+        why: q.why,
+        revival: !!revival,
+      },
+      meta: {
+        qIndex: idx,
+        rkey,
+        roomCode,
+        hostAlive: true,
+        maxPlayers: MAX_PLAYERS,
+        minPlayers: MIN_PLAYERS,
+        phase: revival ? 'revival' : 'question',
+      },
+      started_at: nowIso,
+      updated_at: nowIso,
     });
-
-    // Read back the server timestamp for accurate speed scoring
-    const metaSnap = await get(ref(db, `rooms/${roomCode}/meta/startedAt`));
-    setGreenStartAt(metaSnap.val() || Date.now());
 
     audio.say(q.text);
     audio.startBeat(GREEN_DURATION_SECS * 1000);
@@ -177,7 +216,7 @@ function HostController({ roomCode }) {
 
     bots.forEach(id => {
       const delay    = 800 + Math.random() * 7000;
-      const accuracy = 0.82 - roundIndex * 0.04; // bots get slightly worse over time
+      const accuracy = 0.82 - roundIndex * 0.04;
       setTimeout(async () => {
         const p = state.players?.[id];
         if (!p) return;
@@ -186,8 +225,15 @@ function HostController({ roomCode }) {
         const choice  = correct
           ? q.correctId
           : allKeys.filter(k => k !== q.correctId)[Math.floor(Math.random() * 3)];
-        await set(ref(db, `rooms/${roomCode}/answers/${rkey}/${id}`), {
-          choiceId: choice, submittedAt: serverTimestamp(), ddOn: false, shieldOn: false,
+
+        await supabase.from('answers').upsert({
+          room_code: roomCode,
+          round_key: rkey,
+          player_id: id,
+          choice_id: choice,
+          shield_on: false,
+          dd_on: false,
+          submitted_at: new Date().toISOString(),
         });
       }, delay);
     });
@@ -195,7 +241,7 @@ function HostController({ roomCode }) {
 
   // ── Lock (red light drops) ────────────────────────────────────────────
   const handleLock = useCallback(async () => {
-    if (lockGuard.current) return; // prevents double-lockIn
+    if (lockGuard.current) return;
     lockGuard.current = true;
 
     audio.stopBeat();
@@ -203,17 +249,34 @@ function HostController({ roomCode }) {
     audio.say('Red light!');
 
     // Write locked phase
-    await update(ref(db, `rooms/${roomCode}/meta`), { phase: 'locked' });
+    await supabase.from('rooms').update({
+      phase: 'locked',
+      updated_at: new Date().toISOString()
+    }).eq('room_code', roomCode);
 
-    // GRACE PERIOD: wait 1200ms before reading answers
-    // This ensures last-second answers submitted before lockedAt are captured
+    // GRACE PERIOD: wait before reading answers
     await new Promise(r => setTimeout(r, GRACE_PERIOD_MS));
 
-    // Read all answers exactly once after grace period
-    const rkey       = isRevival ? 'rev' : `r${roundIndex}`;
-    const answersSnap = await get(ref(db, `rooms/${roomCode}/answers/${rkey}`));
-    const answers     = answersSnap.val() || {};
-    const q           = gameQuestions[isRevival ? ROUNDS : roundIndex];
+    const rkey = isRevival ? 'rev' : `r${roundIndex}`;
+    const { data: dbAnswers } = await supabase
+      .from('answers')
+      .select('*')
+      .eq('room_code', roomCode)
+      .eq('round_key', rkey);
+
+    const answers = { ...answersRef.current };
+    if (dbAnswers) {
+      dbAnswers.forEach(a => {
+        answers[a.player_id] = {
+          choiceId: a.choice_id,
+          submittedAt: a.submitted_at ? new Date(a.submitted_at).getTime() : Date.now(),
+          shieldOn: !!a.shield_on,
+          ddOn: !!a.dd_on,
+        };
+      });
+    }
+
+    const q = gameQuestions[isRevival ? ROUNDS : roundIndex];
 
     if (isRevival) {
       await doRevivalResolve(answers, q);
@@ -228,20 +291,31 @@ function HostController({ roomCode }) {
     const { results, eliminations, survivors, newPlayerStates } =
       resolveRound(alivePlayers, answers, q.correctId, greenStartAt);
 
-    // Write correctId NOW (reveal phase)
-    await update(ref(db, `rooms/${roomCode}/question`), { correctId: q.correctId, why: q.why });
+    // Apply updated player states to Supabase
+    await Promise.all(
+      Object.values(newPlayerStates).map(ps =>
+        supabase.from('players').update({
+          score: ps.score,
+          alive: ps.alive,
+          consecutive_wrong: ps.consecutiveWrong,
+          shield: ps.shield ?? 1,
+        }).eq('room_code', roomCode).eq('player_id', ps.id)
+      )
+    );
 
-    // Apply updated player states to Firebase
-    const updates = {};
-    Object.values(newPlayerStates).forEach(ps => {
-      updates[`rooms/${roomCode}/players/${ps.id}/score`]            = ps.score;
-      updates[`rooms/${roomCode}/players/${ps.id}/alive`]            = ps.alive;
-      updates[`rooms/${roomCode}/players/${ps.id}/consecutiveWrong`] = ps.consecutiveWrong;
-      updates[`rooms/${roomCode}/players/${ps.id}/shield`]           = ps.shield ?? 1;
-    });
-    await update(ref(db), updates);
-
-    await update(ref(db, `rooms/${roomCode}/meta`), { phase: 'reveal' });
+    // Reveal correctId and change phase
+    await supabase.from('rooms').update({
+      phase: 'reveal',
+      question: {
+        id: q.id,
+        text: q.text,
+        options: q.options,
+        correctId: q.correctId,
+        why: q.why,
+        revival: false,
+      },
+      updated_at: new Date().toISOString(),
+    }).eq('room_code', roomCode);
 
     setRevealData({ results, eliminations, survivors, question: q, answers });
     setPhase('reveal');
@@ -255,17 +329,29 @@ function HostController({ roomCode }) {
     const eliminated = getPlayers('dead');
     const revivedIds = resolveRevival(eliminated, answers, q.correctId, greenStartAt);
 
-    await update(ref(db, `rooms/${roomCode}/question`), { correctId: q.correctId, why: q.why });
+    // Revive players in Supabase
+    await Promise.all(
+      revivedIds.map(id =>
+        supabase.from('players').update({
+          alive: true,
+          consecutive_wrong: 0,
+        }).eq('room_code', roomCode).eq('player_id', id)
+      )
+    );
 
-    // Revive players in Firebase + reset their strike count
-    const updates = {};
-    revivedIds.forEach(id => {
-      updates[`rooms/${roomCode}/players/${id}/alive`]            = true;
-      updates[`rooms/${roomCode}/players/${id}/consecutiveWrong`] = 0;
-    });
-    if (Object.keys(updates).length) await update(ref(db), updates);
-
-    await update(ref(db, `rooms/${roomCode}/meta`), { phase: 'revreveal' });
+    // Reveal correctId and change phase
+    await supabase.from('rooms').update({
+      phase: 'revreveal',
+      question: {
+        id: q.id,
+        text: q.text,
+        options: q.options,
+        correctId: q.correctId,
+        why: q.why,
+        revival: true,
+      },
+      updated_at: new Date().toISOString(),
+    }).eq('room_code', roomCode);
 
     setRevivalResult({ revivedIds, question: q });
     setRevivalDone(true);
@@ -279,15 +365,16 @@ function HostController({ roomCode }) {
     const nextIndex  = isRevival ? REVIVE_AFTER_ROUND : roundIndex + 1;
 
     if (nextIndex >= ROUNDS || aliveCount <= 1) {
-      // Game over
-      await update(ref(db, `rooms/${roomCode}/meta`), { phase: 'gameover' });
+      await supabase.from('rooms').update({
+        phase: 'gameover',
+        updated_at: new Date().toISOString(),
+      }).eq('room_code', roomCode);
       setPhase('gameover');
       audio.sfxWin();
       audio.say(`${determineWinner(getPlayers('all'))?.name || 'The winner'} wins the game!`);
       return;
     }
 
-    // Check revival
     const deadCount = getPlayers('dead').length;
     if (nextIndex === REVIVE_AFTER_ROUND && !revivalDone && deadCount > 0) {
       setRoundIndex(REVIVE_AFTER_ROUND);
@@ -301,7 +388,7 @@ function HostController({ roomCode }) {
 
   // ── Restart ───────────────────────────────────────────────────────────
   async function handleRestart() {
-    await remove(ref(db, `rooms/${roomCode}`));
+    await supabase.from('rooms').delete().eq('room_code', roomCode);
     window.location.reload();
   }
 
@@ -340,7 +427,6 @@ function HostController({ roomCode }) {
 
   return (
     <div className={`app ${appBgClass}`}>
-      {/* Fixed background layers */}
       <div className="bg-layer" />
       <div className="tint-layer" />
       <div className="flash-layer" id="flash-layer" />

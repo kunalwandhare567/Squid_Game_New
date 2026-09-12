@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, ref, set, serverTimestamp } from '../../firebase';
+import { supabase } from '../../supabase';
 import { useAudio } from '../../context/AudioContext';
 import LightBanner from '../Shared/LightBanner';
 import TimerRing from '../Shared/TimerRing';
@@ -22,12 +22,19 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
 
   async function submitAnswer(choiceId, shield = shieldOn, dd = ddOn) {
     if (locked || !choiceId) return;
-    await set(ref(db, `rooms/${roomCode}/answers/${roundKey}/${pid}`), {
-      choiceId,                       // stable string ID, never an array index
-      submittedAt: serverTimestamp(), // server time = anti-cheat
-      shieldOn: shield,
-      ddOn: dd,
-    });
+    try {
+      await supabase.from('answers').upsert({
+        room_code: roomCode,
+        round_key: roundKey,
+        player_id: pid,
+        choice_id: choiceId,
+        shield_on: shield,
+        dd_on: dd,
+        submitted_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Error submitting answer to Supabase:', err);
+    }
   }
 
   function handleOptionClick(optId) {
@@ -54,7 +61,7 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
   if (!question) return <div className="center"><p className="sub">Loading question…</p></div>;
 
   const optionEntries = Object.entries(question.options);
-  const strikeCount   = me?.consecutiveWrong || 0;
+  const strikeCount   = me?.consecutiveWrong || me?.consecutive_wrong || 0;
 
   return (
     <div className={`player-answer ${locked ? 'locked' : ''}`}>

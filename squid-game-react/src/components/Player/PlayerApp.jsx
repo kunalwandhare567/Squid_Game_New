@@ -1,13 +1,11 @@
 // =====================================================================
-// PlayerApp.jsx — Player root. Listens to Firebase, routes phase screens.
-// Uses sessionStorage pid so phone refresh = same player, no ghost.
+// PlayerApp.jsx — Player root. Listens to Supabase via GameContext,
+// routes phase screens. Uses sessionStorage pid so phone refresh = same player.
 // =====================================================================
-import React, { useState, useEffect, useRef } from 'react';
-import { db, ref, set, onValue, off, serverTimestamp, remove } from '../../firebase';
+import React, { useState, useEffect } from 'react';
 import { useAudio } from '../../context/AudioContext';
-import { GameProvider } from '../../context/GameContext';
+import { GameProvider, useGame } from '../../context/GameContext';
 import { usePlayerSession } from '../../hooks/usePlayerSession';
-import { MAX_PLAYERS } from '../../utils/ruleEngine';
 import PlayerJoin    from './PlayerJoin';
 import PlayerWait    from './PlayerWait';
 import PlayerAnswer  from './PlayerAnswer';
@@ -25,61 +23,38 @@ export default function PlayerApp({ roomCode }) {
 }
 
 function PlayerController({ roomCode }) {
+  const { state } = useGame();
   const { pid } = usePlayerSession();
   const audio   = useAudio();
 
   const [joined,    setJoined]    = useState(false);
   const [isSpec,    setIsSpec]    = useState(false);
-  const [me,        setMe]        = useState(null);
-  const [phase,     setPhase]     = useState('lobby');
-  const [question,  setQuestion]  = useState(null);
   const [myChoiceId,setMyChoiceId]= useState(null);
-  const [meta,      setMeta]      = useState({});
-  const unsubRefs = useRef([]);
+
+  const meta     = state?.meta || {};
+  const phase    = state?.phase || 'lobby';
+  const question = state?.question || null;
+  const me       = state?.players?.[pid] || null;
 
   const isEliminated = me ? (!me.alive && !me.spectator) : false;
 
-  // Subscribe after joining
-  function subscribe() {
-    const metaRef      = ref(db, `rooms/${roomCode}/meta`);
-    const questionRef  = ref(db, `rooms/${roomCode}/question`);
-    const meRef        = ref(db, `rooms/${roomCode}/players/${pid}`);
-
-    const u1 = onValue(metaRef, snap => {
-      const m = snap.val() || {};
-      setMeta(m);
-      setPhase(m.phase || 'lobby');
-      // New question starts — reset answer
-      if (m.phase === 'question' || m.phase === 'revival') {
-        setMyChoiceId(null);
-        audio.startBeat(10000);
-      }
-      if (m.phase === 'locked' || m.phase === 'reveal') audio.stopBeat();
-      if (m.phase === 'gameover') audio.stopBeat();
-    });
-
-    const u2 = onValue(questionRef, snap => setQuestion(snap.val()));
-
-    const u3 = onValue(meRef, snap => {
-      const p = snap.val();
-      if (p) setMe(p);
-    });
-
-    unsubRefs.current = [
-      () => off(metaRef,     'value', u1),
-      () => off(questionRef, 'value', u2),
-      () => off(meRef,       'value', u3),
-    ];
-  }
+  // React to phase audio cues
+  useEffect(() => {
+    if (!joined) return;
+    if (phase === 'question' || phase === 'revival') {
+      setMyChoiceId(null);
+      audio.startBeat(10000);
+    }
+    if (phase === 'locked' || phase === 'reveal' || phase === 'gameover') {
+      audio.stopBeat();
+    }
+  }, [phase, joined]);
 
   function handleJoined({ isSpectator }) {
-    audio.ensureAC(); // Resume AudioContext after user gesture
+    audio.ensureAC();
     setJoined(true);
     setIsSpec(isSpectator);
-    subscribe();
   }
-
-  useEffect(() => () => unsubRefs.current.forEach(u => u()), []);
 
   let content = null;
 

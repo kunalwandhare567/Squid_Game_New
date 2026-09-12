@@ -266,6 +266,19 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
   text-transform: uppercase;
 }
 
+.qr-box-outer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qr-box {
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
 .qr-pulse-dot {
   width: 8px;
   height: 8px;
@@ -676,11 +689,14 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 }
 
 .qr-canvas-wrapper {
-  padding: 8px;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
-  margin: 2px 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 4px 0;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .qr-workflow-steps {

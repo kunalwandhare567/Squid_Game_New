@@ -9,7 +9,7 @@ export const BONUS_WINDOW_MS        = 10000; // 10s window (5s green + 5s blink)
 export const ELIM_RATIO             = 4;      // bottom 1-in-4 eliminated
 export const CONSECUTIVE_WRONG_LIMIT = 2;     // 2 consecutive wrong = eliminate
 export const MIN_PLAYERS            = 1;
-export const MAX_PLAYERS            = 15;
+export const MAX_PLAYERS            = 600;    // Scaled for 400-500+ players
 export const ROUNDS                 = 7;
 export const REVIVE_AFTER_ROUND     = 4;      // revival after round 4
 export const REVIVE_MAX             = 3;      // up to 3 can rejoin
@@ -30,20 +30,41 @@ export function computeSpeedBonus(answerMs, windowMs = BONUS_WINDOW_MS) {
 
 /**
  * computeRoundScore
- * Calculate the score delta and metadata for one player in one round.
+ * Calculate score delta and metadata for one player in one round.
+ * Supports exact text validation and key-based fallback.
  *
- * @param {object|null} answer    - { choiceId, submittedAt, ddOn, shieldOn }
- * @param {string}      correctId - correct option ID (e.g. "opt_A")
- * @param {number}      greenStartAt - server timestamp when green began
- * @param {boolean}     isRevival - revival = no speed bonus
+ * @param {object|null} answer              - { choiceId, choiceText, submittedAt, ddOn, shieldOn }
+ * @param {object|string} questionOrCorrect - Question object or correctId string
+ * @param {number}      greenStartAt        - Server timestamp when green began
+ * @param {boolean}     isRevival           - Revival = no speed bonus
  * @returns {{ points, correct, speedMs }}
  */
-export function computeRoundScore(answer, correctId, greenStartAt, isRevival = false) {
-  if (!answer || !answer.choiceId) {
+export function computeRoundScore(answer, questionOrCorrect, greenStartAt, isRevival = false) {
+  if (!answer || (!answer.choiceId && !answer.choiceText)) {
     return { points: 0, correct: false, speedMs: null };
   }
 
-  const correct = answer.choiceId === correctId;
+  let correct = false;
+  const qObj = typeof questionOrCorrect === 'object' ? questionOrCorrect : null;
+  const targetId = qObj ? qObj.correctId : questionOrCorrect;
+  const targetText = qObj?.correctAnswer || (targetId && qObj?.options?.[targetId]) || null;
+
+  // 1. Validate by exact answer text if available
+  if (answer.choiceText && targetText) {
+    correct = answer.choiceText.trim().toLowerCase() === targetText.trim().toLowerCase();
+  }
+  // 2. Validate by option ID
+  else if (answer.choiceId && targetId) {
+    correct = answer.choiceId === targetId;
+  }
+  // 3. Fallback: resolve choiceId to option text and compare to targetText
+  else if (answer.choiceId && qObj?.options && targetText) {
+    const textOfChoice = qObj.options[answer.choiceId];
+    if (textOfChoice) {
+      correct = textOfChoice.trim().toLowerCase() === targetText.trim().toLowerCase();
+    }
+  }
+
   const speedMs = (answer.submittedAt && greenStartAt)
     ? Math.max(0, answer.submittedAt - greenStartAt)
     : null;
@@ -63,21 +84,17 @@ export function computeRoundScore(answer, correctId, greenStartAt, isRevival = f
 
 /**
  * resolveRound
- * The core elimination engine. Three layers:
- *   Layer 1 — auto-eliminate players with consecutiveWrong >= 2 (BEFORE score-rank)
- *   Layer 2 — score-rank cut: bottom floor(alive/4) by round score
- *   Layer 3 — shield protection: saves from Layer 2 cut
+ * The core elimination engine.
+ *   Layer 1 — evaluate each player's answer (text-verified & ID-verified)
+ *   Layer 2 — 2 consecutive wrong answers = eliminate (unless saved by shield)
  *
- * Returns immutable result objects (no mutation of input players array).
- *
- * @param {object[]} players   - array of { id, name, emoji, score, shield,
- *                               consecutiveWrong, alive }
- * @param {object}   answers   - { [playerId]: { choiceId, submittedAt, ddOn, shieldOn } }
- * @param {string}   correctId - correct option string ID
- * @param {number}   greenStartAt - server timestamp
+ * @param {object[]} players           - Array of { id, name, emoji, score, shield, consecutiveWrong, alive }
+ * @param {object}   answers           - { [playerId]: { choiceId, choiceText, submittedAt, ddOn, shieldOn } }
+ * @param {object|string} questionOrId - Question object or correctId string
+ * @param {number}   greenStartAt      - Server timestamp
  * @returns {{ results, eliminations, survivors, newPlayerStates }}
  */
-export function resolveRound(players, answers, correctId, greenStartAt) {
+export function resolveRound(players, answers, questionOrId, greenStartAt) {
   const alivePlayers = players.filter(p => p.alive && !p.spectator);
   const results = {};
   const playerStates = {};
@@ -87,7 +104,7 @@ export function resolveRound(players, answers, correctId, greenStartAt) {
   for (const player of alivePlayers) {
     const answer = answers[player.id] || null;
     const { points, correct, speedMs } = computeRoundScore(
-      answer, correctId, greenStartAt
+      answer, questionOrId, greenStartAt
     );
 
     const ddUsed       = !!(answer?.ddOn);
@@ -122,15 +139,15 @@ export function resolveRound(players, answers, correctId, greenStartAt) {
     if (r.consecutiveWrong >= CONSECUTIVE_WRONG_LIMIT) {
       // Shield check: shield can absorb the 2nd strike!
       if (r.shieldActive && (player.shield || 0) >= 1) {
-        r.shieldSaved       = true;
-        ps.shield           = Math.max(0, (player.shield || 0) - 1);
-        r.consecutiveWrong  = 1;
-        ps.consecutiveWrong = 1;
+        r.shieldSaved        = true;
+        ps.shield            = Math.max(0, (player.shield || 0) - 1);
+        r.consecutiveWrong   = 1;
+        ps.consecutiveWrong  = 1;
         ps.consecutive_wrong = 1;
-        ps.alive            = true;
+        ps.alive             = true;
       } else {
-        r.autoEliminated    = true;
-        ps.alive            = false;
+        r.autoEliminated     = true;
+        ps.alive             = false;
       }
     } else {
       ps.alive = true;
@@ -156,9 +173,13 @@ export function resolveRound(players, answers, correctId, greenStartAt) {
  * resolveRevival
  * Fastest correct answers from eliminated players rejoin (up to REVIVE_MAX).
  */
-export function resolveRevival(eliminatedPlayers, answers, correctId, greenStartAt) {
+export function resolveRevival(eliminatedPlayers, answers, questionOrId, greenStartAt) {
   const correct = eliminatedPlayers
-    .filter(p => answers[p.id]?.choiceId === correctId)
+    .filter(p => {
+      const ans = answers[p.id];
+      if (!ans) return false;
+      return computeRoundScore(ans, questionOrId, greenStartAt, true).correct;
+    })
     .map(p => ({
       id: p.id,
       speedMs: (answers[p.id]?.submittedAt && greenStartAt)
@@ -184,8 +205,8 @@ export function rankPlayers(players) {
     .map(p => ({
       ...p,
       score: Number(p.score) || 0,
-      consecutiveWrong: Number(p.consecutiveWrong) || 0,
-      joinOrder: Number(p.joinOrder) || 99,
+      consecutiveWrong: Number(p.consecutiveWrong ?? p.consecutive_wrong ?? 0),
+      joinOrder: Number(p.joinOrder ?? p.join_order ?? 99),
       alive: !!p.alive
     }));
 
@@ -209,7 +230,6 @@ export function determineWinner(players) {
 /**
  * buildGameSet
  * Draw ROUNDS+1 unique questions randomly from the bank and shuffle option display order.
- * correctId is always a stable string key — never an array index.
  */
 export function buildGameSet(bank, rounds = ROUNDS) {
   const shuffled = fisherYates([...bank]);
@@ -218,33 +238,45 @@ export function buildGameSet(bank, rounds = ROUNDS) {
 
 /**
  * buildQuestion
- * Shuffles raw options so the correct answer is randomly distributed among A, B, C, D (25% each).
+ * Shuffles raw options so the correct answer is randomly distributed among A, B, C, D.
+ * Preserves canonical correctAnswer text and assigns correctId.
  */
 export function buildQuestion(rawQ) {
   const { id, text, options, correctIndex, why, category } = rawQ;
+  const canonicalCorrectAnswer = rawQ.correctAnswer || (options ? options[correctIndex ?? 0] : '') || '';
   const stableKeys = ['opt_A', 'opt_B', 'opt_C', 'opt_D'];
 
   // Pair each option text with its correct status
-  const optionItems = options.map((t, idx) => ({
+  const optionItems = (options || []).map((t, idx) => ({
     text: t,
-    isCorrect: idx === (correctIndex ?? 0)
+    isCorrect: canonicalCorrectAnswer
+      ? t.trim().toLowerCase() === canonicalCorrectAnswer.trim().toLowerCase()
+      : idx === (correctIndex ?? 0)
   }));
 
-  // Shuffle option items randomly every time
+  // Shuffle option items randomly for host baseline
   const shuffledItems = fisherYates([...optionItems]);
 
   const displayOptions = {};
   let correctId = 'opt_A';
 
   shuffledItems.forEach((item, i) => {
-    const key = stableKeys[i];
+    const key = stableKeys[i] || `opt_${i}`;
     displayOptions[key] = item.text;
     if (item.isCorrect) {
       correctId = key;
     }
   });
 
-  return { id, text, options: displayOptions, correctId, why: why || '', category: category || '' };
+  return {
+    id,
+    text,
+    options: displayOptions,
+    correctId,
+    correctAnswer: canonicalCorrectAnswer,
+    why: why || '',
+    category: category || ''
+  };
 }
 
 export function fisherYates(arr) {
@@ -261,6 +293,6 @@ export function generateRoomCode() {
 }
 
 export function generatePlayerId() {
-  // Timestamp + random — collision probability negligible even at 200 players/day
   return `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
+

@@ -285,25 +285,42 @@ function HostController({ roomCode }) {
     }
   }, [lockGuard, isRevival, roundIndex, gameQuestions, roomCode, greenStartAt]);
 
+  // ── Batch player updates for 400-500 player scaling ───────────────────
+  async function batchUpdatePlayerStates(playerList) {
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < playerList.length; i += CHUNK_SIZE) {
+      const chunk = playerList.slice(i, i + CHUNK_SIZE).map(ps => ({
+        room_code: roomCode,
+        player_id: ps.id,
+        name: ps.name,
+        emoji: ps.emoji,
+        alive: ps.alive,
+        spectator: !!ps.spectator,
+        score: ps.score,
+        consecutive_wrong: ps.consecutiveWrong ?? ps.consecutive_wrong ?? 0,
+        shield: ps.shield ?? 1,
+        dd: ps.dd ?? 1,
+        join_order: ps.joinOrder ?? ps.join_order ?? 99,
+        bot: !!ps.bot,
+      }));
+      try {
+        await supabase.from('players').upsert(chunk);
+      } catch (err) {
+        console.error('Batch update players error:', err);
+      }
+    }
+  }
+
   // ── Resolve normal round ──────────────────────────────────────────────
   async function doResolve(answers, q) {
     const alivePlayers = getPlayers('alive');
     const { results, eliminations, survivors, newPlayerStates } =
-      resolveRound(alivePlayers, answers, q.correctId, greenStartAt);
+      resolveRound(alivePlayers, answers, q, greenStartAt);
 
-    // Apply updated player states to Supabase
-    await Promise.all(
-      Object.values(newPlayerStates).map(ps =>
-        supabase.from('players').update({
-          score: ps.score,
-          alive: ps.alive,
-          consecutive_wrong: ps.consecutiveWrong,
-          shield: ps.shield ?? 1,
-        }).eq('room_code', roomCode).eq('player_id', ps.id)
-      )
-    );
+    // Apply updated player states to Supabase in batches (supports 500+ players)
+    await batchUpdatePlayerStates(Object.values(newPlayerStates));
 
-    // Reveal correctId and change phase
+    // Reveal correctId, correctAnswer, and change phase
     await supabase.from('rooms').update({
       phase: 'reveal',
       question: {
@@ -311,6 +328,7 @@ function HostController({ roomCode }) {
         text: q.text,
         options: q.options,
         correctId: q.correctId,
+        correctAnswer: q.correctAnswer || (q.options ? q.options[q.correctId] : ''),
         why: q.why,
         revival: false,
       },
@@ -336,17 +354,19 @@ function HostController({ roomCode }) {
   // ── Resolve revival round ─────────────────────────────────────────────
   async function doRevivalResolve(answers, q) {
     const eliminated = getPlayers('dead');
-    const revivedIds = resolveRevival(eliminated, answers, q.correctId, greenStartAt);
+    const revivedIds = resolveRevival(eliminated, answers, q, greenStartAt);
 
-    // Revive players in Supabase
-    await Promise.all(
-      revivedIds.map(id =>
-        supabase.from('players').update({
+    if (revivedIds.length > 0) {
+      const revivedList = eliminated
+        .filter(p => revivedIds.includes(p.id))
+        .map(p => ({
+          ...p,
           alive: true,
+          consecutiveWrong: 0,
           consecutive_wrong: 0,
-        }).eq('room_code', roomCode).eq('player_id', id)
-      )
-    );
+        }));
+      await batchUpdatePlayerStates(revivedList);
+    }
 
     // Reveal correctId and change phase
     await supabase.from('rooms').update({
@@ -356,6 +376,7 @@ function HostController({ roomCode }) {
         text: q.text,
         options: q.options,
         correctId: q.correctId,
+        correctAnswer: q.correctAnswer || (q.options ? q.options[q.correctId] : ''),
         why: q.why,
         revival: true,
       },

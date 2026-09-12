@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase';
 import { useAudio } from '../../context/AudioContext';
 import LightBanner from '../Shared/LightBanner';
@@ -20,6 +20,20 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
     setDdOn(false);
   }, [roundKey]);
 
+  // Per-player option shuffling on mobile:
+  // Shuffles options specifically for this player device so peeking/cheating is impossible!
+  const shuffledOptions = useMemo(() => {
+    if (!question?.options) return [];
+    const entries = Object.entries(question.options);
+    const list = [...entries];
+    // Deterministic or seeded shuffle per player & question
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [question?.id, pid]);
+
   async function submitAnswer(choiceId, shield = shieldOn, dd = ddOn) {
     if (locked || !choiceId) return;
     try {
@@ -37,12 +51,16 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
     }
   }
 
-  function handleOptionClick(optId) {
+  function handleOptionClick(optId, optText) {
     if (locked) return;
     setMyChoiceId(optId);
     try {
       sessionStorage.setItem(`sq_ans_${roomCode}_${roundKey}`, optId);
       sessionStorage.setItem('sq_last_choice', optId);
+      if (optText) {
+        sessionStorage.setItem(`sq_ans_text_${roomCode}_${roundKey}`, optText);
+        sessionStorage.setItem('sq_last_choice_text', optText);
+      }
     } catch (e) {}
     audio.sfxTap();
     submitAnswer(optId);
@@ -64,8 +82,7 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
 
   if (!question) return <div className="center"><p className="sub">Loading question…</p></div>;
 
-  const optionEntries = Object.entries(question.options);
-  const strikeCount   = me?.consecutiveWrong || me?.consecutive_wrong || 0;
+  const strikeCount = me?.consecutiveWrong || me?.consecutive_wrong || 0;
 
   return (
     <div className={`player-answer ${locked ? 'locked' : ''}`}>
@@ -87,14 +104,14 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
 
       <h2 className="question-text">{question.text}</h2>
 
-      {/* Options */}
+      {/* Shuffled Options per player */}
       <div className="options-grid player-grid">
-        {optionEntries.map(([optId, text], i) => (
+        {shuffledOptions.map(([optId, text], i) => (
           <button
             key={optId}
             className={`option ${myChoiceId === optId ? 'option-chosen' : ''} ${locked ? 'option-locked' : ''}`}
             style={{ borderColor: COLORS[i] }}
-            onClick={() => handleOptionClick(optId)}
+            onClick={() => handleOptionClick(optId, text)}
             disabled={locked}
             aria-label={`${LETTERS[i]}: ${text}`}
           >

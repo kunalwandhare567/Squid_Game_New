@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, AlertTriangle, Skull, Award, HelpCircle } from 'l
 export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode }) {
   const audio = useAudio();
 
-  // Retrieve user's submitted choice (from prop or session storage fallback)
+  // Retrieve user's submitted choice ID
   const chosenOptId = useMemo(() => {
     if (myChoiceId) return myChoiceId;
     if (typeof window !== 'undefined') {
@@ -18,18 +18,37 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
     return null;
   }, [myChoiceId, roomCode, roundKey]);
 
+  // Retrieve user's submitted choice text
+  const chosenText = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const storedText = sessionStorage.getItem(`sq_ans_text_${roomCode}_${roundKey}`) ||
+                         sessionStorage.getItem('sq_last_choice_text');
+      if (storedText) return storedText;
+    }
+    if (chosenOptId && question?.options?.[chosenOptId]) {
+      return question.options[chosenOptId];
+    }
+    return chosenOptId ? `Option ${chosenOptId.replace('opt_', '')}` : 'No Answer Submitted (Time Out)';
+  }, [chosenOptId, question, roomCode, roundKey]);
+
   const correctId = question?.correctId;
-  const isCorrect = Boolean(chosenOptId && correctId && chosenOptId === correctId);
+  const correctText = question?.correctAnswer || (correctId && question?.options?.[correctId]) || 'Correct Answer';
+
+  // Multi-tier correctness check (Text-verified + ID-verified)
+  const isCorrect = useMemo(() => {
+    if (!chosenOptId && (!chosenText || chosenText.startsWith('No Answer'))) return false;
+    // 1. Exact canonical text match
+    if (chosenText && correctText && !chosenText.startsWith('Option ') && !chosenText.startsWith('No Answer')) {
+      if (chosenText.trim().toLowerCase() === correctText.trim().toLowerCase()) return true;
+    }
+    // 2. Exact Option ID match
+    if (chosenOptId && correctId && chosenOptId === correctId) return true;
+    return false;
+  }, [chosenOptId, chosenText, correctId, correctText]);
+
   const isAlive   = Boolean(me?.alive !== false);
   const strikes   = Number(me?.consecutiveWrong ?? me?.consecutive_wrong ?? 0);
-  const isEliminated = !isAlive || strikes >= 2;
-
-  const correctText = (correctId && question?.options?.[correctId]) || 'Correct Answer';
-  const chosenText  = chosenOptId && question?.options?.[chosenOptId]
-    ? question.options[chosenOptId]
-    : chosenOptId
-    ? `Option ${chosenOptId.replace('opt_', '')}`
-    : 'No Answer Submitted (Time Out)';
+  const isEliminated = !isAlive || (!isCorrect && strikes >= 2);
 
   // Trigger audio feedback once on verdict reveal
   useEffect(() => {
@@ -43,7 +62,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
       audio.sfxWrong();
       audio.say('Incorrect. Warning — one more wrong answer and you are out.');
     }
-  }, []);
+  }, [isCorrect, isEliminated]);
 
   // ── CASE 1: CORRECT & SAFE ───────────────────────────────────────────
   if (isCorrect) {

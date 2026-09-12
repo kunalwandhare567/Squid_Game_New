@@ -1,4 +1,5 @@
 [build]
+  base = "squid-game-react"
   publish = "dist"
   command = "npm run build"
 

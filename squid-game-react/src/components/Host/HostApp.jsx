@@ -446,7 +446,17 @@ function HostController({ roomCode }) {
   // ── Render phase ──────────────────────────────────────────────────────
   const topControls = (
     <div className="top-controls">
-      <span className="brand">IAE SQUID GAME</span>
+      <div className="top-brand-group">
+        <div className="top-geo-badges">
+          <span className="geo-icon pink">○</span>
+          <span className="geo-icon blue">△</span>
+          <span className="geo-icon green">□</span>
+        </div>
+        <div className="top-title-wrap">
+          <span className="brand">IAE SQUID GAME</span>
+          <span className="brand-tagline">AI • AUTOMATION • INTELLIGENCE</span>
+        </div>
+      </div>
       <div className="ctrl-btns">
         <button className="icon-btn" onClick={toggleMute} title="Sound">
           {isMuted ? <VolumeX size={18} color="#ff8a8a" /> : <Volume2 size={18} color="#57ffb0" />}

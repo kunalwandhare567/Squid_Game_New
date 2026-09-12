@@ -1,16 +1,36 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import {
+  Brain, Shield, Zap, AlertTriangle, Lock, Users,
+  Flame, Radio, Sparkles, CheckCircle2, Clock
+} from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { useAudio } from '../../context/AudioContext';
 import { ANSWER_FRAC, GREEN_DURATION_SECS } from '../../utils/ruleEngine';
 import DollSvg from '../Shared/DollSvg';
 import TimerRing from '../Shared/TimerRing';
-import LightBanner from '../Shared/LightBanner';
-import Equalizer from '../Shared/Equalizer';
 
-const COLORS  = ['#ff2d78','#3aa0ff','#f7b733','#57d38c'];
-const LETTERS = ['A','B','C','D'];
+const COLORS  = ['#ff2d78', '#3aa0ff', '#f7b733', '#57d38c'];
+const LETTERS = ['A', 'B', 'C', 'D'];
 
-export default function HostQuestion({ question, roundNum, totalRounds, isRevival, aliveCount, onLock, onLightChange }) {
+const QUESTION_QUOTES = [
+  'THINK FAST. ANSWER SMART. SURVIVE.',
+  'EVERY SECOND COUNTS IN THE ARENA.',
+  'KNOWLEDGE IS YOUR ULTIMATE WEAPON.',
+  'FAST MINDS SURVIVE LONGER.',
+  'ONE QUESTION CAN CHANGE YOUR FATE.',
+  'THE ARENA REWARDS THE SWIFT.',
+  'PRESSURE REVEALS TRUE MASTERY.'
+];
+
+export default function HostQuestion({
+  question,
+  roundNum,
+  totalRounds,
+  isRevival,
+  aliveCount,
+  onLock,
+  onLightChange
+}) {
   const { state }  = useGame();
   const audio      = useAudio();
   const [light, setLight]       = useState('green'); // 'green'|'alert'|'fake-red'|'red'
@@ -22,8 +42,15 @@ export default function HostQuestion({ question, roundNum, totalRounds, isReviva
   const lockedRef = useRef(false);
   const timers    = useRef([]);
 
-  const addTimer = (fn, ms) => { const t = setTimeout(fn, ms); timers.current.push(t); return t; };
-  const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = []; };
+  const addTimer = (fn, ms) => {
+    const t = setTimeout(fn, ms);
+    timers.current.push(t);
+    return t;
+  };
+  const clearAll = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  };
 
   // Notify parent of light state for full-screen background animations
   useEffect(() => {
@@ -120,45 +147,180 @@ export default function HostQuestion({ question, roundNum, totalRounds, isReviva
 
   const handleManualLock = useCallback(() => dropReal(), []);
 
-  const pct = aliveCount > 0 ? Math.round(ansCount / aliveCount * 100) : 0;
+  const pct = aliveCount > 0 ? Math.min(100, Math.round((ansCount / aliveCount) * 100)) : 0;
+  const quote = useMemo(() => {
+    const idx = (roundNum - 1) % QUESTION_QUOTES.length;
+    return QUESTION_QUOTES[idx >= 0 ? idx : 0];
+  }, [roundNum]);
+
+  const isRed = light === 'red' || light === 'fake-red';
+  const isAlert = light === 'alert';
+  const isGreen = light === 'green';
+
+  const lightStateClass = isRed ? 'state-red-light' : isAlert ? 'state-alert-light' : 'state-green-light';
 
   return (
-    <div className="host-question">
-      <div className="hq-top">
-        <DollSvg phase={light === 'red' || light === 'fake-red' ? 'red' : 'green'} />
-        <LightBanner state={light === 'fake-red' ? 'red' : light} />
-        <div className="round-badge">{isRevival ? '⭐ REVIVAL' : `Round ${roundNum} / ${totalRounds}`}</div>
+    <div className={`host-arena-question-screen ${lightStateClass}`}>
+      {/* ── Background Geometric Ambient Shapes ──────────────────────── */}
+      <div className="arena-geo-ambient" aria-hidden="true">
+        <span className="geo-q-shape gq-1">○</span>
+        <span className="geo-q-shape gq-2">△</span>
+        <span className="geo-q-shape gq-3">□</span>
+        <span className="geo-q-shape gq-4">○</span>
       </div>
 
-      <div className="hq-timer-row">
-        <TimerRing key={question?.id || roundNum} totalSeconds={GREEN_DURATION_SECS} resetKey={question?.id || roundNum} />
-        {armed && <span className="armed-pill">⚡ ARMED</span>}
-      </div>
-
-      <h2 className="question-text">{question.text}</h2>
-
-      <div className="options-grid host-grid">
-        {Object.entries(question.options).map(([optId, text], i) => (
-          <div key={optId} className="host-option" style={{ borderColor: COLORS[i] }}>
-            <span className="badge" style={{ background: COLORS[i] }}>{LETTERS[i]}</span>
-            <span className="opt-text">{text}</span>
-          </div>
-        ))}
-      </div>
-
-      <Equalizer frozen={light === 'red' || locked} />
-
-      <div className="hq-footer">
-        <div className="answer-prog">
-          <span className="ans-count">{ansCount} / {aliveCount} answered ({pct}%)</span>
-          <div className="prog-track">
-            <div className="prog-fill" style={{ width: `${pct}%`, background: pct >= 60 ? '#57ffb0' : '#3aa0ff' }} />
+      {/* ── Top HUD Stage Header (Left: Circular Round, Center: 3D Doll, Right: Timer) ── */}
+      <div className="hq-stage-header">
+        {/* Left: Circular Round Element */}
+        <div className="hq-round-circle-badge">
+          <span className="hq-round-sub-label">ROUND</span>
+          <div className="hq-round-fraction">
+            <span className="hq-round-current">{roundNum}</span>
+            <span className="hq-round-slash">/</span>
+            <span className="hq-round-total">{totalRounds}</span>
           </div>
         </div>
-        <button className="cta cta-red" onClick={handleManualLock} disabled={locked}>
-          🔴 Red Light — Stop Music
-        </button>
+
+        {/* Center: 3D Animated Doll in Direct Center */}
+        <div className="hq-center-doll-stage">
+          <DollSvg phase={isRed ? 'red' : 'green'} />
+        </div>
+
+        {/* Right: Circular Timer Ring */}
+        <div className="hq-timer-stage-right">
+          <div className="hq-timer-core">
+            <TimerRing
+              key={question?.id || roundNum}
+              totalSeconds={GREEN_DURATION_SECS}
+              resetKey={question?.id || roundNum}
+            />
+            {armed && (
+              <span className="hq-armed-badge">
+                <Zap size={12} />
+                <span>ARMED</span>
+              </span>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* ── Dynamic Light Status Banner (Centered Above Question) ────── */}
+      <div className="hq-banner-row">
+        <div className={`hq-light-indicator-banner ${isRed ? 'banner-red' : isAlert ? 'banner-alert' : 'banner-green'}`}>
+          <div className="banner-signal-dot" />
+          <div className="banner-content">
+            <span className="banner-main-title">
+              {isRed ? '🔴 RED LIGHT — STOP!' : isAlert ? '⚠️ ALERT — RED IMMINENT!' : '🟢 GREEN LIGHT — CHOOSE FAST!'}
+            </span>
+            <span className="banner-sub-text">
+              {isRed ? 'ANSWERS LOCKED — STAND BY FOR VERDICT' : isAlert ? 'COUNTDOWN ENDING — LOCK IN NOW' : 'PLAYERS ARE ANSWERING ON THEIR PHONES'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main Question Showcase Arena ─────────────────────────────── */}
+      <div className="hq-arena-body">
+        {/* Question Panel */}
+        <div className="hq-question-card">
+          <div className="q-card-corner-tl" />
+          <div className="q-card-corner-tr" />
+          <div className="q-card-corner-bl" />
+          <div className="q-card-corner-br" />
+
+          <div className="q-card-header">
+            <span className="q-badge-label">QUESTION 0{roundNum}</span>
+            {locked && (
+              <span className="q-locked-badge">
+                <Lock size={12} />
+                <span>LOCKED</span>
+              </span>
+            )}
+          </div>
+
+          <h1 className="hq-main-question-text">{question?.text}</h1>
+        </div>
+
+        {/* 2x2 Answer Grid */}
+        <div className={`hq-options-grid ${locked ? 'options-locked' : 'options-active'}`}>
+          {question?.options && Object.entries(question.options).map(([optId, text], i) => (
+            <div
+              key={optId}
+              className={`hq-option-card opt-card-${LETTERS[i]}`}
+              style={{ '--opt-color': COLORS[i] }}
+            >
+              <div className="opt-letter-disc" style={{ background: COLORS[i] }}>
+                {LETTERS[i]}
+              </div>
+              <div className="opt-text-wrap">
+                <span className="opt-label-letter" style={{ color: COLORS[i] }}>OPTION {LETTERS[i]}</span>
+                <span className="opt-body-text">{text}</span>
+              </div>
+              {locked && (
+                <div className="opt-lock-overlay">
+                  <Lock size={16} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom Arena Control & Progress Bar ──────────────────────── */}
+      <footer className="hq-arena-footer">
+        {/* Live Answer Progress */}
+        <div className="hq-progress-box">
+          <div className="progress-info-row">
+            <div className="progress-label-group">
+              <Users size={16} color="#57ffb0" />
+              <span className="progress-label-txt">RESPONSES:</span>
+              <strong className="progress-count-val">{ansCount} / {aliveCount} ANSWERED</strong>
+            </div>
+            <span className="progress-pct-val">{pct}%</span>
+          </div>
+
+          <div className="hq-progress-track">
+            <div
+              className="hq-progress-fill"
+              style={{
+                width: `${pct}%`,
+                background: isRed
+                  ? '#ff5a5a'
+                  : pct >= 60
+                  ? 'linear-gradient(90deg, #2ebf9f, #57ffb0)'
+                  : 'linear-gradient(90deg, #3aa0ff, #57ffb0)'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Motivational Survival Quote */}
+        <div className="hq-quote-box">
+          <span>“ {quote} ”</span>
+        </div>
+
+        {/* Host Control / Status */}
+        <div className="hq-controls-box">
+          <button
+            className={`btn-host-lock-light ${locked ? 'is-locked' : 'can-lock'}`}
+            onClick={handleManualLock}
+            disabled={locked}
+          >
+            {locked ? (
+              <>
+                <Lock size={16} />
+                <span>RED LIGHT ACTIVE</span>
+              </>
+            ) : (
+              <>
+                <Flame size={16} />
+                <span>RED LIGHT — STOP NOW</span>
+              </>
+            )}
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }
+

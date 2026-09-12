@@ -5,7 +5,7 @@
 
 export const BASE_POINTS            = 2;
 export const SPEED_BONUS_MAX        = 3;
-export const BONUS_WINDOW_MS        = 20000; // 20s green window
+export const BONUS_WINDOW_MS        = 10000; // 10s window (5s green + 5s blink)
 export const ELIM_RATIO             = 4;      // bottom 1-in-4 eliminated
 export const CONSECUTIVE_WRONG_LIMIT = 2;     // 2 consecutive wrong = eliminate
 export const MIN_PLAYERS            = 1;
@@ -13,7 +13,7 @@ export const MAX_PLAYERS            = 15;
 export const ROUNDS                 = 7;
 export const REVIVE_AFTER_ROUND     = 4;      // revival after round 4
 export const REVIVE_MAX             = 3;      // up to 3 can rejoin
-export const GREEN_DURATION_SECS    = 20;     // 20s question countdown
+export const GREEN_DURATION_SECS    = 10;     // 10s question countdown (5s green + 5s blink)
 export const GRACE_PERIOD_MS        = 1200;   // wait after lock before reading answers
 export const ANSWER_FRAC            = 0.60;   // 60% must answer before red arms
 

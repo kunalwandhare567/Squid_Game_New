@@ -144,27 +144,31 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
           </div>
         </div>
 
-        {/* Right Column: Blinking QR Code & Players */}
+        {/* Right Column: QR Code & Admitted Players List */}
         <div className="lobby-right">
           <div className="qr-section-wrapper">
             <QRDisplay url={joinURL} roomCode={roomCode} />
             
-            <div className="lobby-stats-pill">
-              <span>{realCount} real</span>
-              <span className="stat-dot">•</span>
-              <span>{bots.length} 🤖</span>
-              {spectators.length > 0 && (
-                <>
-                  <span className="stat-dot">•</span>
-                  <span>{spectators.length} 👁</span>
-                </>
-              )}
-            </div>
+            {/* Show stats pill ONLY when players/bots are admitted */}
+            {totalCount > 0 && (
+              <div className="lobby-stats-pill">
+                <span>{realCount} real</span>
+                <span className="stat-dot">•</span>
+                <span>{bots.length} 🤖</span>
+                {spectators.length > 0 && (
+                  <>
+                    <span className="stat-dot">•</span>
+                    <span>{spectators.length} 👁</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Show player list ONLY when players are admitted/joined */}
           {playerList.length > 0 && (
             <div className="player-chips-tray">
-              <div className="tray-label">Joined Players ({playerList.length})</div>
+              <div className="tray-label">Admitted Players ({playerList.length})</div>
               <div className="player-chips">
                 {playerList.map(([id, p]) => (
                   <div key={id} className={`chip ${p.bot ? 'chip-bot' : p.spectator ? 'chip-spec' : ''}`}>

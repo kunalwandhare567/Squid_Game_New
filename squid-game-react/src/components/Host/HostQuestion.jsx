@@ -39,24 +39,24 @@ export default function HostQuestion({ question, roundNum, totalRounds, isReviva
     if (count >= threshold && !armedRef.current) arm();
   }, [state.answers, aliveCount]);
 
-  // Main 20-Second Timeline: 0-10s Green, 10-20s Fast Alert & Red Blink, 20s Hard Stop
+  // Main 10-Second Timeline: 0-5s Solid Green, 5-10s Fast Alert & Red Blink, 10s Hard Stop
   useEffect(() => {
-    // Start tempo beat
-    audio.startBeat(20000);
+    // Start tempo beat accelerating across 10 seconds
+    audio.startBeat(10000);
 
-    // 1. At 10 Seconds: Trigger Fast Alert window
+    // 1. At 5 Seconds: Trigger Fast Alert & Blinking window
     const alertTimer = setTimeout(() => {
       if (!armedRef.current && !lockedRef.current) {
         arm();
       }
-    }, 10000);
+    }, 5000);
 
-    // 2. At Exactly 20 Seconds: Hard Stop!
+    // 2. At Exactly 10 Seconds: Hard Stop!
     const hardStopTimer = setTimeout(() => {
       if (!lockedRef.current) {
         dropReal();
       }
-    }, 20000);
+    }, 10000);
 
     return () => {
       clearTimeout(alertTimer);
@@ -75,36 +75,36 @@ export default function HostQuestion({ question, roundNum, totalRounds, isReviva
   }
 
   function runAlertFlickers() {
-    // Escalating flickers during the 10s-20s window
-    // Flicker 1 at +2s (12s mark), duration 250ms
+    // Escalating flickers during the 5s-10s window
+    // Flicker 1 at +1.0s (6.0s mark), duration 200ms
     addTimer(() => {
       if (lockedRef.current) return;
       setLight('fake-red');
       audio.sfxFakeFlicker();
       addTimer(() => {
         if (!lockedRef.current) setLight('alert');
-      }, 250);
-    }, 2000);
+      }, 200);
+    }, 1000);
 
-    // Flicker 2 at +4.8s (14.8s mark), duration 350ms
+    // Flicker 2 at +2.4s (7.4s mark), duration 300ms
     addTimer(() => {
       if (lockedRef.current) return;
       setLight('fake-red');
       audio.sfxFakeFlicker();
       addTimer(() => {
         if (!lockedRef.current) setLight('alert');
-      }, 350);
-    }, 4800);
+      }, 300);
+    }, 2400);
 
-    // Flicker 3 at +7.5s (17.5s mark), duration 450ms
+    // Flicker 3 at +3.7s (8.7s mark), duration 400ms
     addTimer(() => {
       if (lockedRef.current) return;
       setLight('fake-red');
       audio.sfxFakeFlicker();
       addTimer(() => {
         if (!lockedRef.current) setLight('alert');
-      }, 450);
-    }, 7500);
+      }, 400);
+    }, 3700);
   }
 
   function dropReal() {

@@ -157,9 +157,16 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 
 /* ── Timer ring ────────────────────────────────────────────────────── */
 .timer-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.timer-blinking {
+  animation: timerPulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes timerPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(255, 45, 120, 0.4)); }
+  100% { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(255, 45, 120, 0.9)); }
+}
 .timer-num {
   position: absolute; font-size: 22px; font-weight: 900;
-  transition: color .5s; user-select: none;
+  transition: color .3s; user-select: none;
 }
 .armed-pill {
   background: rgba(255,210,87,.18); color: var(--c-gold); border: 1px solid var(--c-gold);
@@ -600,17 +607,19 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 }
 
 .player-chips-tray {
-  max-width: 320px;
+  max-width: 360px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  animation: fadeIn .3s ease-out;
 }
 
 .tray-label {
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   color: var(--c-sub);
   text-transform: uppercase;
 }
@@ -619,23 +628,30 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  max-width: 340px;
+  max-width: 360px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px;
   justify-content: center;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
 
 .chip {
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 13px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 6px;
   animation: pop .35s cubic-bezier(.2,1.4,.4,1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-.chip-bot  { border-color: #7fa295; opacity: .7; }
-.chip-spec { border-color: var(--c-blue); opacity: .75; }
+.chip-bot  { border-color: #7fa295; opacity: .8; background: rgba(127,162,149,0.1); }
+.chip-spec { border-color: var(--c-blue); opacity: .85; background: rgba(58,160,255,0.1); }
 .chip-em   { font-size: 16px; }
 .chip-tag  { font-size: 12px; }
 

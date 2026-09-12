@@ -38,10 +38,15 @@ function PlayerController({ roomCode }) {
 
   const isEliminated = me ? (!me.alive && !me.spectator) : false;
 
-  // Reset answer selection whenever a new question is loaded
+  // Reset answer selection ONLY when a new question round starts
   useEffect(() => {
-    setMyChoiceId(null);
-  }, [question?.id]);
+    if (phase === 'question' || phase === 'revival') {
+      setMyChoiceId(null);
+      try {
+        sessionStorage.removeItem('sq_last_choice');
+      } catch (e) {}
+    }
+  }, [phase, question?.id]);
 
   // Manage round audio cues and ensure beats stop when phase transitions
   useEffect(() => {
@@ -64,6 +69,8 @@ function PlayerController({ roomCode }) {
     setJoined(true);
     setIsSpec(isSpectator);
   }
+
+  const currentRoundKey = meta.rkey || (meta.qIndex != null ? `r${meta.qIndex}` : 'r0');
 
   let content = null;
 
@@ -96,15 +103,23 @@ function PlayerController({ roomCode }) {
   } else if (phase === 'question' || phase === 'locked') {
     content = (
       <PlayerAnswer
-        key={question?.id || `r${meta.qIndex ?? 0}`}
+        key={question?.id || currentRoundKey}
         roomCode={roomCode} pid={pid}
         question={question} locked={phase === 'locked'}
-        me={me} roundKey={`r${meta.qIndex ?? 0}`}
+        me={me} roundKey={currentRoundKey}
         myChoiceId={myChoiceId} setMyChoiceId={setMyChoiceId}
       />
     );
   } else if (phase === 'reveal') {
-    content = <PlayerVerdict me={me} question={question} myChoiceId={myChoiceId} />;
+    content = (
+      <PlayerVerdict
+        me={me}
+        question={question}
+        myChoiceId={myChoiceId}
+        roundKey={currentRoundKey}
+        roomCode={roomCode}
+      />
+    );
   } else {
     content = <PlayerWait me={me} />;
   }

@@ -314,6 +314,15 @@ function HostController({ roomCode }) {
         why: q.why,
         revival: false,
       },
+      meta: {
+        phase: 'reveal',
+        qIndex: roundIndex,
+        rkey: `r${roundIndex}`,
+        roomCode,
+        hostAlive: true,
+        maxPlayers: MAX_PLAYERS,
+        minPlayers: MIN_PLAYERS,
+      },
       updated_at: new Date().toISOString(),
     }).eq('room_code', roomCode);
 
@@ -349,6 +358,15 @@ function HostController({ roomCode }) {
         correctId: q.correctId,
         why: q.why,
         revival: true,
+      },
+      meta: {
+        phase: 'revreveal',
+        qIndex: REVIVE_AFTER_ROUND,
+        rkey: 'rev',
+        roomCode,
+        hostAlive: true,
+        maxPlayers: MAX_PLAYERS,
+        minPlayers: MIN_PLAYERS,
       },
       updated_at: new Date().toISOString(),
     }).eq('room_code', roomCode);

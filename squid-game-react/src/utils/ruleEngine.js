@@ -80,25 +80,25 @@ export function computeRoundScore(answer, correctId, greenStartAt, isRevival = f
 export function resolveRound(players, answers, correctId, greenStartAt) {
   const alivePlayers = players.filter(p => p.alive && !p.spectator);
   const results = {};
-  // Clone player state so we don't mutate originals
   const playerStates = {};
   alivePlayers.forEach(p => { playerStates[p.id] = { ...p }; });
 
-  // ── PASS 1: Compute round score and update consecutiveWrong ───────────
+  // ── PASS 1: Compute round score and update strikes ────────────────────
   for (const player of alivePlayers) {
     const answer = answers[player.id] || null;
     const { points, correct, speedMs } = computeRoundScore(
       answer, correctId, greenStartAt
     );
 
-    const ddUsed      = !!(answer?.ddOn);
+    const ddUsed       = !!(answer?.ddOn);
     const shieldActive = !!(answer?.shieldOn);
-    const prevConsec  = player.consecutiveWrong || 0;
-    const newConsec   = correct ? 0 : prevConsec + 1;
-    const newScore    = Math.max(0, player.score + points);
+    const prevConsec   = Number(player.consecutiveWrong ?? player.consecutive_wrong ?? 0);
+    const newConsec    = correct ? 0 : prevConsec + 1;
+    const newScore     = Math.max(0, (Number(player.score) || 0) + points);
 
-    playerStates[player.id].consecutiveWrong = newConsec;
-    playerStates[player.id].score            = newScore;
+    playerStates[player.id].consecutiveWrong  = newConsec;
+    playerStates[player.id].consecutive_wrong = newConsec;
+    playerStates[player.id].score             = newScore;
 
     results[player.id] = {
       correct,
@@ -106,64 +106,47 @@ export function resolveRound(players, answers, correctId, greenStartAt) {
       speedMs,
       ddUsed,
       shieldActive,
-      consecutiveWrong:  newConsec,
+      consecutiveWrong: newConsec,
       newScore,
-      autoEliminated:    false,
-      scoreEliminated:   false,
-      shieldSaved:       false,
+      autoEliminated:   false,
+      scoreEliminated:  false,
+      shieldSaved:      false,
     };
   }
 
-  // ── PASS 2: Auto-eliminate 2-strike players ───────────────────────────
-  // NOTE: correct players always have consecutiveWrong = 0 after Pass 1.
-  // So a correct player can NEVER be auto-eliminated here. 100% guaranteed.
+  // ── PASS 2: Eliminate players reaching 2 consecutive wrong answers ────
   for (const player of alivePlayers) {
-    if (results[player.id].consecutiveWrong >= CONSECUTIVE_WRONG_LIMIT) {
-      results[player.id].autoEliminated = true;
-      playerStates[player.id].alive     = false;
-    }
-  }
+    const r = results[player.id];
+    const ps = playerStates[player.id];
 
-  // ── PASS 3: Score-rank cut from non-auto-eliminated players ──────────
-  const survived = alivePlayers.filter(p => !results[p.id].autoEliminated);
-  const n        = Math.floor(survived.length / ELIM_RATIO);
-
-  if (n > 0) {
-    // Sort ascending: worst score first → bottom n are candidates
-    const sorted = [...survived].sort((a, b) => {
-      const ra = results[a.id], rb = results[b.id];
-      if (ra.points !== rb.points)         return ra.points - rb.points;
-      if (ra.newScore !== rb.newScore)     return ra.newScore - rb.newScore;
-      if (ra.speedMs == null)              return -1;
-      if (rb.speedMs == null)              return 1;
-      return rb.speedMs - ra.speedMs; // slower = worse
-    });
-
-    const candidates = sorted.slice(0, n);
-    for (const player of candidates) {
-      const r = results[player.id];
-      const ps = playerStates[player.id];
-      // Shield check: only saves from score-rank cut, not from 2-strike auto-elim
+    if (r.consecutiveWrong >= CONSECUTIVE_WRONG_LIMIT) {
+      // Shield check: shield can absorb the 2nd strike!
       if (r.shieldActive && (player.shield || 0) >= 1) {
         r.shieldSaved       = true;
         ps.shield           = Math.max(0, (player.shield || 0) - 1);
+        r.consecutiveWrong  = 1;
+        ps.consecutiveWrong = 1;
+        ps.consecutive_wrong = 1;
+        ps.alive            = true;
       } else {
-        r.scoreEliminated   = true;
+        r.autoEliminated    = true;
         ps.alive            = false;
       }
+    } else {
+      ps.alive = true;
     }
   }
 
-  // ── PASS 4: Categorise results ────────────────────────────────────────
+  // ── PASS 3: Categorise eliminations & survivors ───────────────────────
   const eliminations = alivePlayers
-    .filter(p => results[p.id].autoEliminated || results[p.id].scoreEliminated)
+    .filter(p => results[p.id].autoEliminated)
     .map(p => ({
       ...playerStates[p.id],
-      reason: results[p.id].autoEliminated ? 'strike' : 'score',
+      reason: 'strike',
     }));
 
   const survivors = alivePlayers
-    .filter(p => !results[p.id].autoEliminated && !results[p.id].scoreEliminated)
+    .filter(p => !results[p.id].autoEliminated)
     .map(p => playerStates[p.id]);
 
   return { results, eliminations, survivors, newPlayerStates: playerStates };

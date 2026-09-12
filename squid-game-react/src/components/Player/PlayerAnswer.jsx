@@ -40,6 +40,10 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
   function handleOptionClick(optId) {
     if (locked) return;
     setMyChoiceId(optId);
+    try {
+      sessionStorage.setItem(`sq_ans_${roomCode}_${roundKey}`, optId);
+      sessionStorage.setItem('sq_last_choice', optId);
+    } catch (e) {}
     audio.sfxTap();
     submitAnswer(optId);
   }

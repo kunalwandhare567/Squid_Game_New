@@ -4,7 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 const rawUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
 let supabaseUrl = rawUrl.trim().replace(/^["']|["']$/g, '');
 
-// If user accidentally put the Postgres URI, extract the project ref to construct the HTTPS URL
+// Strip trailing /rest/v1 or trailing slashes if present
+supabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+
+// If user put the Postgres URI, extract the project ref to construct the HTTPS URL
 if (supabaseUrl.startsWith('postgresql://') || supabaseUrl.startsWith('postgres://')) {
   const match = supabaseUrl.match(/postgres\.([a-zA-Z0-9_-]+):/);
   if (match && match[1]) {
@@ -14,7 +17,7 @@ if (supabaseUrl.startsWith('postgresql://') || supabaseUrl.startsWith('postgres:
   supabaseUrl = `https://${supabaseUrl}.supabase.co`;
 }
 
-// Fallback to project ref from connection string if empty
+// Fallback to project ref if empty
 if (!supabaseUrl) {
   supabaseUrl = 'https://gpcpakrnuinkffhsueux.supabase.co';
 }

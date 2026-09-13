@@ -69,27 +69,19 @@ export function computeRoundScore(answer, questionOrCorrect, greenStartAt, isRev
     ? Math.max(0, answer.submittedAt - greenStartAt)
     : null;
 
-  if (!correct) {
-    const penalty = answer.ddOn ? -2 : 0;
-    return { points: penalty, correct: false, speedMs };
-  }
-
-  const base  = BASE_POINTS;
-  const speed = isRevival ? 0 : computeSpeedBonus(speedMs, BONUS_WINDOW_MS);
-  const raw   = base + speed;
-  const points = answer.ddOn ? raw * 2 : raw;
-
-  return { points, correct: true, speedMs };
+  return { points: correct ? 2 : 0, correct, speedMs };
 }
 
 /**
  * resolveRound
  * The core elimination engine.
- *   Layer 1 — evaluate each player's answer (text-verified & ID-verified)
- *   Layer 2 — 3 consecutive wrong answers = eliminate (unless saved by shield)
+ *   - Correct answer: +2 pts
+ *   - 1st wrong answer: -2 pts
+ *   - 2nd consecutive wrong answer: -3 pts
+ *   - 3rd consecutive wrong answer: Permanently Eliminated!
  *
- * @param {object[]} players           - Array of { id, name, emoji, score, shield, consecutiveWrong, alive }
- * @param {object}   answers           - { [playerId]: { choiceId, choiceText, submittedAt, ddOn, shieldOn } }
+ * @param {object[]} players           - Array of { id, name, emoji, score, consecutiveWrong, alive }
+ * @param {object}   answers           - { [playerId]: { choiceId, choiceText, submittedAt } }
  * @param {object|string} questionOrId - Question object or correctId string
  * @param {number}   greenStartAt      - Server timestamp
  * @returns {{ results, eliminations, survivors, newPlayerStates }}
@@ -103,28 +95,54 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
   // ── PASS 1: Compute round score and update strikes ────────────────────
   for (const player of alivePlayers) {
     const answer = answers[player.id] || null;
-    const { points, correct, speedMs } = computeRoundScore(
+    const { correct, speedMs } = computeRoundScore(
       answer, questionOrId, greenStartAt
     );
 
-    const ddUsed       = !!(answer?.ddOn);
-    const shieldActive = !!(answer?.shieldOn);
-    const prevConsec   = Number(player.consecutiveWrong ?? player.consecutive_wrong ?? 0);
-    const newConsec    = correct ? 0 : prevConsec + 1;
-    const newScore     = Math.max(0, (Number(player.score) || 0) + points);
+    const prevConsec = Number(player.consecutiveWrong ?? player.consecutive_wrong ?? 0);
+    let newConsec = 0;
+    let points = 0;
+
+    if (correct) {
+      newConsec = 0;
+      points = 2; // +2 for every correct answer
+    } else {
+      newConsec = prevConsec + 1;
+      if (newConsec === 1) {
+        points = -2; // -2 for 1st wrong answer
+      } else if (newConsec === 2) {
+        points = -3; // -3 for 2nd consecutive wrong answer
+      } else {
+        points = 0;  // 3rd consecutive wrong = eliminated
+      }
+    }
+
+    const currentScore = Number(player.score) || 0;
+    const newScore     = Math.max(0, currentScore + points);
+
+    const prevCorrect  = Number(player.correctCount ?? player.correct_count ?? 0);
+    const newCorrect   = correct ? prevCorrect + 1 : prevCorrect;
+    const prevRounds   = Number(player.roundsPlayed ?? player.rounds_played ?? 0);
+    const newRounds    = prevRounds + 1;
 
     playerStates[player.id].consecutiveWrong  = newConsec;
     playerStates[player.id].consecutive_wrong = newConsec;
     playerStates[player.id].score             = newScore;
+    playerStates[player.id].correctCount      = newCorrect;
+    playerStates[player.id].correct_count     = newCorrect;
+    playerStates[player.id].roundsPlayed      = newRounds;
+    playerStates[player.id].rounds_played     = newRounds;
 
     results[player.id] = {
       correct,
       points,
       speedMs,
-      ddUsed,
-      shieldActive,
+      ddUsed: false,
+      shieldActive: false,
       consecutiveWrong: newConsec,
       newScore,
+      correctCount:     newCorrect,
+      roundsPlayed:     newRounds,
       autoEliminated:   false,
       scoreEliminated:  false,
       shieldSaved:      false,
@@ -137,18 +155,8 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
     const ps = playerStates[player.id];
 
     if (r.consecutiveWrong >= CONSECUTIVE_WRONG_LIMIT) {
-      // Shield check: shield can absorb the 3rd strike!
-      if (r.shieldActive && (player.shield || 0) >= 1) {
-        r.shieldSaved        = true;
-        ps.shield            = Math.max(0, (player.shield || 0) - 1);
-        r.consecutiveWrong   = CONSECUTIVE_WRONG_LIMIT - 1;
-        ps.consecutiveWrong  = CONSECUTIVE_WRONG_LIMIT - 1;
-        ps.consecutive_wrong = CONSECUTIVE_WRONG_LIMIT - 1;
-        ps.alive             = true;
-      } else {
-        r.autoEliminated     = true;
-        ps.alive             = false;
-      }
+      r.autoEliminated     = true;
+      ps.alive             = false;
     } else {
       ps.alive = true;
     }

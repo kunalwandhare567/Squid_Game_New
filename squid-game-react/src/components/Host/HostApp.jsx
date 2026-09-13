@@ -337,6 +337,8 @@ function HostController({ roomCode }) {
         spectator: !!ps.spectator,
         score: ps.score,
         consecutive_wrong: ps.consecutiveWrong ?? ps.consecutive_wrong ?? 0,
+        correct_count: ps.correctCount ?? ps.correct_count ?? 0,
+        rounds_played: ps.roundsPlayed ?? ps.rounds_played ?? 0,
         shield: ps.shield ?? 1,
         dd: ps.dd ?? 1,
         join_order: ps.joinOrder ?? ps.join_order ?? 99,

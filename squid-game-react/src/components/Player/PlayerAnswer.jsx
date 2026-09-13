@@ -4,7 +4,7 @@ import { useAudio } from '../../context/AudioContext';
 import TimerRing from '../Shared/TimerRing';
 import Equalizer from '../Shared/Equalizer';
 import { GREEN_DURATION_SECS, ROUNDS } from '../../utils/ruleEngine';
-import { Shield, Zap, AlertTriangle, Lock, Check, Volume2, VolumeX, Radio } from 'lucide-react';
+import { AlertTriangle, Lock, Check, Volume2, VolumeX, Radio } from 'lucide-react';
 
 const COLORS  = ['#ff2d78', '#3aa0ff', '#f7b733', '#57d38c'];
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -24,8 +24,6 @@ export default function PlayerAnswer({
   myChoiceId,
   setMyChoiceId
 }) {
-  const [shieldOn, setShieldOn] = useState(false);
-  const [ddOn,     setDdOn]     = useState(false);
   const [liveAnswersCount, setLiveAnswersCount] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const audio = useAudio();
@@ -103,7 +101,7 @@ export default function PlayerAnswer({
     return list;
   }, [question?.id, pid]);
 
-  async function submitAnswer(choiceId, shield = shieldOn, dd = ddOn) {
+  async function submitAnswer(choiceId) {
     if (locked || !choiceId) return;
     try {
       await supabase.from('answers').upsert({
@@ -111,8 +109,8 @@ export default function PlayerAnswer({
         round_key: roundKey,
         player_id: pid,
         choice_id: choiceId,
-        shield_on: shield,
-        dd_on: dd,
+        shield_on: false,
+        dd_on: false,
         submitted_at: new Date().toISOString(),
       });
     } catch (err) {
@@ -133,20 +131,6 @@ export default function PlayerAnswer({
     } catch (e) {}
     audio?.sfxTap();
     submitAnswer(optId);
-  }
-
-  function handleShield() {
-    if (locked || (me?.shield || 0) < 1) return;
-    const next = !shieldOn;
-    setShieldOn(next);
-    if (myChoiceId) submitAnswer(myChoiceId, next, ddOn);
-  }
-
-  function handleDD() {
-    if (locked || (me?.dd || 0) < 1) return;
-    const next = !ddOn;
-    setDdOn(next);
-    if (myChoiceId) submitAnswer(myChoiceId, shieldOn, next);
   }
 
   if (!question) {
@@ -316,42 +300,7 @@ export default function PlayerAnswer({
           </div>
         </main>
 
-        {/* ── 7. POWER-UPS ROW ── */}
-        <section className="player-powerups-section" aria-label="Power-ups">
-          <div className="player-powerups-row">
-            <button
-              className={`player-powerup-btn pu-shield ${shieldOn ? 'is-active' : ''}`}
-              onClick={handleShield}
-              disabled={locked || (me?.shield || 0) < 1}
-              aria-pressed={shieldOn}
-              title={me?.shield ? 'Absorb 1 wrong strike' : 'No shields remaining'}
-            >
-              <div className="pu-icon-disc">
-                <Shield size={16} />
-              </div>
-              <div className="pu-info">
-                <span className="pu-name">SHIELD</span>
-                <span className="pu-count">({me?.shield || 0})</span>
-              </div>
-            </button>
 
-            <button
-              className={`player-powerup-btn pu-doubledown ${ddOn ? 'is-active' : ''}`}
-              onClick={handleDD}
-              disabled={locked || (me?.dd || 0) < 1}
-              aria-pressed={ddOn}
-              title={me?.dd ? 'Double score for correct answer, -2 on wrong' : 'No double-downs remaining'}
-            >
-              <div className="pu-icon-disc">
-                <Zap size={16} />
-              </div>
-              <div className="pu-info">
-                <span className="pu-name">✕2 DOUBLE</span>
-                <span className="pu-count">({me?.dd || 0})</span>
-              </div>
-            </button>
-          </div>
-        </section>
 
         {/* ── 8. LIVE PROGRESS & FOOTER ── */}
         <footer className="player-footer-section">
@@ -382,7 +331,7 @@ export default function PlayerAnswer({
             ) : myChoiceId ? (
               <span>✓ CHOICE LOCKED IN · TAP ANY OPTION TO CHANGE BEFORE TIME RUNS OUT</span>
             ) : (
-              <span>⚡ TAP FAST FOR UP TO +3 SPEED BONUS POINTS!</span>
+              <span>🎯 CORRECT ANSWER = +2 PTS · 3 CONSECUTIVE WRONG = ELIMINATED!</span>
             )}
           </div>
         </footer>

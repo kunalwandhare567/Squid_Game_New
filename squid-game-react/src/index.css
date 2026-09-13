@@ -6302,6 +6302,21 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
   box-shadow: 0 0 24px rgba(255, 45, 120, 0.75);
 }
 
+/* ── Remove Powered by Netlify Badge & Overlay ── */
+#netlify-badge,
+[data-netlify-badge],
+[data-netlify-drawer],
+#netlify-drawer,
+iframe[src*="netlify"],
+div[class*="netlify"],
+.netlify-badge-embed {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+
 
 
 

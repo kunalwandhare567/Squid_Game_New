@@ -49,10 +49,25 @@ body {
   animation: red-alarm-pulse 1.2s ease-in-out infinite;
   transition: background .15s;
 }
+.app.bg-wrong-blink .bg-layer {
+  background: radial-gradient(circle at 50% 34%, rgba(255, 35, 75, 0.95), #24050b 82%) !important;
+  animation: red-danger-strobe 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate !important;
+  transition: background 0.15s;
+}
 @keyframes breathe { 0%,100%{filter:brightness(.92)} 50%{filter:brightness(1.28)} }
 @keyframes red-alarm-pulse {
   0%, 100% { filter: brightness(1) saturate(1.15); }
   50% { filter: brightness(1.25) saturate(1.35); }
+}
+@keyframes red-danger-strobe {
+  0% {
+    filter: brightness(0.9) saturate(1.2);
+    box-shadow: inset 0 0 40px rgba(255, 45, 120, 0.3);
+  }
+  100% {
+    filter: brightness(1.4) saturate(1.8);
+    box-shadow: inset 0 0 120px rgba(255, 0, 60, 0.8);
+  }
 }
 @keyframes full-screen-alert-blink {
   0%, 100% {
@@ -75,6 +90,17 @@ body {
   animation: full-screen-alert-tint 0.9s ease-in-out infinite;
 }
 .app.bg-red   .tint-layer { opacity: 1; background: radial-gradient(circle, rgba(255, 85, 115, 0.42), rgba(255, 50, 85, 0.55)) !important; transition: opacity .1s; }
+.app.bg-wrong-blink .tint-layer {
+  opacity: 1 !important;
+  background: radial-gradient(circle, rgba(255, 30, 80, 0.55), rgba(255, 0, 60, 0.75)) !important;
+  animation: red-tint-flash 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate !important;
+  transition: opacity 0.1s;
+}
+
+@keyframes red-tint-flash {
+  0% { opacity: 0.35; }
+  100% { opacity: 0.95; }
+}
 
 @keyframes full-screen-alert-tint {
   0%, 100% {
@@ -2419,7 +2445,489 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 }
 .emoji-btn:hover { transform: scale(1.1); }
 .emoji-sel { border-color: var(--c-pink); background: #1c4a3f; box-shadow: 0 0 18px rgba(255,61,134,.35); }
-.error-msg { color: var(--c-red); font-size: 14px; font-weight: 600; }
+/* ── Player Final Result / Personal Scorecard (Full Responsive Design) ── */
+.player-scorecard-arena {
+  width: 100%;
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  box-sizing: border-box;
+  padding: max(14px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: radial-gradient(circle at 50% 20%, rgba(14, 48, 38, 0.9), #06120f 80%);
+}
+
+.scorecard-container {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2.2vh, 18px);
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  align-items: center;
+}
+
+/* 1. Header */
+.scorecard-header {
+  text-align: center;
+  width: 100%;
+  padding-bottom: 2px;
+}
+
+.brand-logo-title {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.brand-sub-title {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--c-sub);
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+/* 2. Hero Section */
+.scorecard-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+}
+
+.scorecard-hero-title {
+  font-size: clamp(24px, 5.8vw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  margin: 0 0 2px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.tier-gold .scorecard-hero-title {
+  color: #ffd257;
+  text-shadow: 0 0 24px rgba(255, 210, 87, 0.5);
+}
+
+.tier-silver .scorecard-hero-title {
+  color: #3aa0ff;
+  text-shadow: 0 0 24px rgba(58, 160, 255, 0.5);
+}
+
+.tier-bronze .scorecard-hero-title {
+  color: #f7b733;
+  text-shadow: 0 0 24px rgba(247, 183, 51, 0.5);
+}
+
+.scorecard-hero-sub {
+  font-size: clamp(11px, 2.4vw, 12.5px);
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+/* 3. Hexagonal Avatar Frame */
+.scorecard-avatar-section {
+  position: relative;
+  margin: 6px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scorecard-hex-frame {
+  width: clamp(100px, 24vw, 126px);
+  height: clamp(100px, 24vw, 126px);
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: rgba(12, 38, 30, 0.9);
+  border: 3px solid;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.hex-gold {
+  border-color: #ffd257;
+  box-shadow: 0 0 32px rgba(255, 210, 87, 0.45), inset 0 0 20px rgba(255, 210, 87, 0.2);
+}
+
+.hex-silver {
+  border-color: #3aa0ff;
+  box-shadow: 0 0 32px rgba(58, 160, 255, 0.45), inset 0 0 20px rgba(58, 160, 255, 0.2);
+}
+
+.hex-bronze {
+  border-color: #f7b733;
+  box-shadow: 0 0 32px rgba(247, 183, 51, 0.45), inset 0 0 20px rgba(247, 183, 51, 0.2);
+}
+
+.hex-purple {
+  border-color: #c084fc;
+  box-shadow: 0 0 32px rgba(192, 132, 252, 0.4), inset 0 0 20px rgba(192, 132, 252, 0.15);
+}
+
+.hex-cyan {
+  border-color: #38bdf8;
+  box-shadow: 0 0 32px rgba(56, 189, 248, 0.4), inset 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+.hex-crown-badge {
+  position: absolute;
+  top: -14px;
+  z-index: 3;
+  filter: drop-shadow(0 2px 8px rgba(255, 210, 87, 0.7));
+  animation: float-crown 2s infinite ease-in-out;
+}
+
+@keyframes float-crown {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.hex-avatar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.hex-avatar-emoji {
+  font-size: clamp(44px, 11vw, 56px);
+  line-height: 1;
+}
+
+.hex-rank-pill {
+  position: absolute;
+  bottom: -10px;
+  background: #06120f;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+  color: #ffffff;
+}
+
+/* 4. Player Name */
+.scorecard-player-name {
+  font-size: clamp(18px, 4.5vw, 24px);
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  margin: 2px 0 8px;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* 5. Score Chip */
+.scorecard-score-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  background: rgba(10, 32, 24, 0.85);
+  border: 1.5px solid var(--accent, #ffd257);
+  border-radius: 999px;
+  padding: 4px 18px;
+  box-shadow: 0 0 20px var(--accent, #ffd257);
+}
+
+.scorecard-score-chip .score-value {
+  font-size: clamp(20px, 5vw, 26px);
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.scorecard-score-chip .score-unit {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--accent, #ffd257);
+}
+
+/* 6. Personalized Message Card */
+.scorecard-message-card {
+  width: 100%;
+  background: rgba(14, 40, 32, 0.75);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 16px;
+  padding: 14px 18px;
+  text-align: center;
+  box-sizing: border-box;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.msg-card-title {
+  font-size: clamp(15px, 3.5vw, 18px);
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 3px;
+}
+
+.msg-card-sub {
+  font-size: clamp(12px, 2.8vw, 14px);
+  font-weight: 700;
+  color: var(--c-green);
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.msg-card-body {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cbd5e1;
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* 7. Performance Stats Grid */
+.scorecard-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stat-metric-card {
+  background: rgba(12, 36, 28, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.stat-metric-card .stat-icon {
+  font-size: 14px;
+}
+
+.stat-metric-card .stat-val {
+  font-size: clamp(16px, 3.8vw, 20px);
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.stat-metric-card .stat-lbl {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--c-sub);
+}
+
+/* 8. Leaderboard Section */
+.scorecard-leaderboard-section {
+  width: 100%;
+  background: rgba(10, 30, 24, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.leaderboard-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 8px;
+}
+
+.lb-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #ffffff;
+}
+
+.lb-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--c-sub);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.scorecard-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.scorecard-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+}
+
+.scorecard-lb-row.is-current-player {
+  background: rgba(255, 45, 120, 0.18);
+  border: 1.5px solid #ff2d78;
+  box-shadow: 0 0 14px rgba(255, 45, 120, 0.25);
+  font-weight: 800;
+}
+
+.lb-rank-col {
+  width: 22px;
+  font-weight: 900;
+  font-size: 12px;
+  text-align: center;
+}
+
+.lb-avatar-col {
+  font-size: 14px;
+}
+
+.lb-name-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lb-name-txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-you-tag {
+  background: #ff2d78;
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.lb-score-col {
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--c-sub);
+}
+
+.lb-score-col strong {
+  color: #ffffff;
+  font-size: 12px;
+}
+
+/* 9. Return Home Action */
+.scorecard-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.btn-scorecard-home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(87, 255, 176, 0.2), rgba(87, 255, 176, 0.08));
+  border: 1.5px solid var(--c-green);
+  border-radius: 999px;
+  padding: 10px 28px;
+  color: var(--c-green);
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  width: 100%;
+  max-width: 280px;
+  touch-action: manipulation;
+}
+
+.btn-scorecard-home:hover {
+  background: rgba(87, 255, 176, 0.28);
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(87, 255, 176, 0.35);
+}
+
+.btn-scorecard-home:active {
+  transform: scale(0.97);
+}
+
+/* ── Breakpoints ──────────────────────────────────────────────────── */
+@media (max-width: 359px) {
+  .scorecard-container {
+    gap: 10px;
+  }
+  .scorecard-hex-frame {
+    width: 90px;
+    height: 90px;
+  }
+  .hex-avatar-emoji {
+    font-size: 38px;
+  }
+  .scorecard-stats-grid {
+    gap: 6px;
+  }
+  .stat-metric-card {
+    padding: 8px 4px;
+  }
+}
+
+@media (min-width: 768px) {
+  .scorecard-container {
+    max-width: 520px;
+    gap: 20px;
+  }
+  .scorecard-hex-frame {
+    width: 136px;
+    height: 136px;
+  }
+  .hex-avatar-emoji {
+    font-size: 60px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .player-scorecard-arena {
+    padding: 32px 40px;
+    justify-content: center;
+  }
+  .scorecard-container {
+    max-width: 580px;
+  }
+}
 
 /* ── Finale Arena Victory Screen (Expo Grand Finale) ─────────────────── */
 .finale-arena-screen {

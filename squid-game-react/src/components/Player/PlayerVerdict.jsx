@@ -5,7 +5,7 @@ import DollSvg from '../Shared/DollSvg';
 import { CheckCircle, XCircle, AlertTriangle, Skull, Award, HelpCircle } from 'lucide-react';
 import { REVIVE_AFTER_ROUND } from '../../utils/ruleEngine';
 
-export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode }) {
+export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode, onVerdictResult }) {
   const audio = useAudio();
 
   // Retrieve user's submitted choice ID
@@ -58,8 +58,11 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
     return match ? parseInt(match[0], 10) + 1 : 1;
   }, [roundKey]);
 
-  // Trigger audio feedback once on verdict reveal
+  // Trigger audio feedback and notify parent of verdict result once on reveal
   useEffect(() => {
+    const verdictType = isCorrect ? 'correct' : isEliminated ? 'eliminated' : 'wrong';
+    onVerdictResult?.(verdictType);
+
     if (isCorrect) {
       audio.sfxCorrect();
       audio.say('Correct answer! You survived.');
@@ -73,12 +76,12 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
       audio.sfxWrong();
       audio.say('Incorrect. Strike one. Two strikes remaining.');
     }
-  }, [isCorrect, isEliminated, strikes]);
+  }, [isCorrect, isEliminated, strikes, onVerdictResult]);
 
   // ── CASE 1: CORRECT & SAFE ───────────────────────────────────────────
   if (isCorrect) {
     return (
-      <div className="verdict-screen center">
+      <div className="verdict-screen center verdict-safe-screen">
         <ConfettiCanvas active />
         <div className="cele-badge">✓</div>
         <div className="verdict verdict-safe">CORRECT & SAFE! 🎉</div>
@@ -112,7 +115,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
     const hasRevivalChance = roundNum <= REVIVE_AFTER_ROUND;
 
     return (
-      <div className="verdict-screen center">
+      <div className="verdict-screen center verdict-wrong-screen verdict-elim-screen">
         <div className="skull">💀</div>
         <div className="verdict verdict-out">ELIMINATED</div>
 
@@ -163,9 +166,9 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
   const isSecondStrike = strikes >= 2;
 
   return (
-    <div className="verdict-screen center">
+    <div className="verdict-screen center verdict-wrong-screen">
       <DollSvg phase="red" />
-      <div className="verdict verdict-out" style={{ color: '#f7b733' }}>
+      <div className="verdict verdict-out" style={{ color: '#ff2d78' }}>
         INCORRECT!
       </div>
 

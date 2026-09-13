@@ -38,10 +38,13 @@ function PlayerController({ roomCode }) {
 
   const isEliminated = me ? (!me.alive && !me.spectator) : false;
 
+  const [verdictStatus, setVerdictStatus] = useState('safe');
+
   // Reset answer selection ONLY when a new question round starts
   useEffect(() => {
     if (phase === 'question' || phase === 'revival') {
       setMyChoiceId(null);
+      setVerdictStatus('safe');
       try {
         sessionStorage.removeItem('sq_last_choice');
       } catch (e) {}
@@ -85,7 +88,14 @@ function PlayerController({ roomCode }) {
   } else if (phase === 'lobby') {
     content = <PlayerWait me={me} title="🎮 IN LOBBY" message="You're connected! Waiting for the host to start the game…" type="lobby" />;
   } else if (phase === 'gameover') {
-    content = <PlayerEnd me={me} />;
+    content = (
+      <PlayerEnd
+        me={me}
+        players={state?.players || {}}
+        totalRounds={totalRounds}
+        pid={pid}
+      />
+    );
   } else if (phase === 'revival') {
     if (!isEliminated) {
       content = (
@@ -147,14 +157,26 @@ function PlayerController({ roomCode }) {
         myChoiceId={myChoiceId}
         roundKey={currentRoundKey}
         roomCode={roomCode}
+        onVerdictResult={setVerdictStatus}
       />
     );
   } else {
     content = <PlayerWait me={me} />;
   }
 
+  const isWrongVerdict = phase === 'reveal' && (verdictStatus === 'wrong' || verdictStatus === 'eliminated');
+  const appBgClass = phase === 'question' || phase === 'revival'
+    ? 'bg-green'
+    : phase === 'locked'
+    ? 'bg-red'
+    : isWrongVerdict
+    ? 'bg-wrong-blink'
+    : phase === 'reveal'
+    ? 'bg-green'
+    : '';
+
   return (
-    <div className={`app ${phase === 'question' || phase === 'revival' ? 'bg-green' : phase === 'locked' ? 'bg-red' : ''}`}>
+    <div className={`app ${appBgClass}`}>
       <div className="bg-layer" />
       <div className="tint-layer" />
       <div className="flash-layer" id="flash-layer" />

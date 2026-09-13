@@ -1,18 +1,49 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase';
 import { useAudio } from '../../context/AudioContext';
-import LightBanner from '../Shared/LightBanner';
 import TimerRing from '../Shared/TimerRing';
 import Equalizer from '../Shared/Equalizer';
-import { GREEN_DURATION_SECS } from '../../utils/ruleEngine';
+import { GREEN_DURATION_SECS, ROUNDS } from '../../utils/ruleEngine';
+import { Shield, Zap, AlertTriangle, Lock, Check, Volume2, VolumeX, Radio } from 'lucide-react';
 
-const COLORS  = ['#ff2d78','#3aa0ff','#f7b733','#57d38c'];
-const LETTERS = ['A','B','C','D'];
+const COLORS  = ['#ff2d78', '#3aa0ff', '#f7b733', '#57d38c'];
+const LETTERS = ['A', 'B', 'C', 'D'];
 
-export default function PlayerAnswer({ roomCode, pid, question, locked, me, roundKey, myChoiceId, setMyChoiceId }) {
+export default function PlayerAnswer({
+  roomCode,
+  pid,
+  question,
+  locked,
+  me,
+  roundKey,
+  roundNum = 1,
+  totalRounds = ROUNDS,
+  aliveCount = 0,
+  totalCount = 0,
+  isRevival = false,
+  myChoiceId,
+  setMyChoiceId
+}) {
   const [shieldOn, setShieldOn] = useState(false);
   const [ddOn,     setDdOn]     = useState(false);
+  const [liveAnswersCount, setLiveAnswersCount] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
   const audio = useAudio();
+
+  // Audio mute sync
+  useEffect(() => {
+    if (audio?.getMuted) {
+      setIsMuted(audio.getMuted());
+    }
+  }, [audio]);
+
+  const toggleSound = () => {
+    if (!audio) return;
+    const next = !isMuted;
+    setIsMuted(next);
+    audio.setMuted(next);
+    if (!next) audio.sfxTap();
+  };
 
   // Reset powerups on new question
   useEffect(() => {
@@ -20,13 +51,51 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
     setDdOn(false);
   }, [roundKey]);
 
+  // Sync live answers count for the progress bar
+  useEffect(() => {
+    if (!roomCode || !roundKey) return;
+    let isMounted = true;
+
+    async function syncAnswers() {
+      try {
+        const { data } = await supabase
+          .from('answers')
+          .select('player_id')
+          .eq('room_code', roomCode)
+          .eq('round_key', roundKey);
+        if (data && isMounted) {
+          setLiveAnswersCount(data.length);
+        }
+      } catch (err) {
+        // Silently ignore sync errors
+      }
+    }
+
+    syncAnswers();
+    const interval = setInterval(syncAnswers, 1000);
+
+    const channel = supabase
+      .channel(`player-answers-${roomCode}-${roundKey}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'answers', filter: `room_code=eq.${roomCode}` },
+        () => syncAnswers()
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [roomCode, roundKey]);
+
   // Per-player option shuffling on mobile:
   // Shuffles options specifically for this player device so peeking/cheating is impossible!
   const shuffledOptions = useMemo(() => {
     if (!question?.options) return [];
     const entries = Object.entries(question.options);
     const list = [...entries];
-    // Deterministic or seeded shuffle per player & question
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]];
@@ -62,7 +131,7 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
         sessionStorage.setItem('sq_last_choice_text', optText);
       }
     } catch (e) {}
-    audio.sfxTap();
+    audio?.sfxTap();
     submitAnswer(optId);
   }
 
@@ -80,77 +149,230 @@ export default function PlayerAnswer({ roomCode, pid, question, locked, me, roun
     if (myChoiceId) submitAnswer(myChoiceId, shieldOn, next);
   }
 
-  if (!question) return <div className="center"><p className="sub">Loading question…</p></div>;
+  if (!question) {
+    return (
+      <div className="player-loading-wrap">
+        <div className="player-loading-spinner" />
+        <p className="player-loading-text">Loading question…</p>
+      </div>
+    );
+  }
 
-  const strikeCount = me?.consecutiveWrong || me?.consecutive_wrong || 0;
+  const strikeCount = me?.consecutiveWrong ?? me?.consecutive_wrong ?? 0;
+  const effectiveTotal = aliveCount || totalCount || 1;
+  const answerPercent = Math.min(100, Math.round((liveAnswersCount / effectiveTotal) * 100));
 
   return (
-    <div className={`player-answer ${locked ? 'locked' : ''}`}>
-      {/* Top name badge */}
-      <div className="player-topbar">
-        <span className="player-badge">{me?.emoji} {me?.name}</span>
-        <span className="player-score">⭐ {me?.score || 0} pts</span>
+    <div className={`player-arena ${locked ? 'is-locked' : 'is-green'}`}>
+      {/* Background ambient geometric symbols */}
+      <div className="player-ambient-bg" aria-hidden="true">
+        <span className="ambient-sym sym-circle">○</span>
+        <span className="ambient-sym sym-triangle">△</span>
+        <span className="ambient-sym sym-square">□</span>
       </div>
 
-      <LightBanner state={locked ? 'red' : 'green'} />
+      <div className="player-content-container">
+        {/* ── 1. HEADER & PLAYER IDENTITY ── */}
+        <header className="player-hud-header">
+          <div className="player-brand">
+            <span className="brand-dot" />
+            <span className="brand-title">IAE SQUID GAME</span>
+          </div>
 
-      {/* Strike warning */}
-      {strikeCount === 1 && !locked && (
-        <div className="strike-warn">⚠️ 1 Strike — one more wrong = eliminated!</div>
-      )}
+          <div className="player-header-actions">
+            <button
+              className="sound-toggle-btn"
+              onClick={toggleSound}
+              aria-label={isMuted ? 'Unmute game audio' : 'Mute game audio'}
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </button>
 
-      {/* Timer — only during green */}
-      {!locked && <TimerRing key={question?.id || roundKey} totalSeconds={GREEN_DURATION_SECS} resetKey={question?.id || roundKey} />}
+            <div className="player-hud-card">
+              <div className="player-identity">
+                <span className="player-avatar-emoji">{me?.emoji || '👤'}</span>
+                <span className="player-name-text">{me?.name || 'Player'}</span>
+              </div>
+              <div className="player-score-chip">
+                <span className="score-star">⭐</span>
+                <span className="score-num">{me?.score || 0}</span>
+                <span className="score-unit">PTS</span>
+              </div>
+            </div>
+          </div>
+        </header>
 
-      <h2 className="question-text">{question.text}</h2>
+        {/* ── 2. ROUND & LIGHT STATUS BAR ── */}
+        <div className="player-status-row">
+          <div className={`player-light-pill ${locked ? 'pill-red' : 'pill-green'}`}>
+            <span className="light-glow-indicator" />
+            <span className="light-pill-text">
+              {locked ? '🔴 RED LIGHT · LOCKED' : '🟢 GREEN LIGHT · CHOOSE FAST!'}
+            </span>
+          </div>
 
-      {/* Shuffled Options per player */}
-      <div className="options-grid player-grid">
-        {shuffledOptions.map(([optId, text], i) => (
-          <button
-            key={optId}
-            className={`option ${myChoiceId === optId ? 'option-chosen' : ''} ${locked ? 'option-locked' : ''}`}
-            style={{ borderColor: COLORS[i] }}
-            onClick={() => handleOptionClick(optId, text)}
-            disabled={locked}
-            aria-label={`${LETTERS[i]}: ${text}`}
-          >
-            <span className="badge" style={{ background: COLORS[i] }}>{LETTERS[i]}</span>
-            <span className="opt-text">{text}</span>
-            {myChoiceId === optId && !locked && <span className="tick">✓</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* Powerups — only during green */}
-      {!locked && (
-        <div className="pu-row">
-          <button
-            className={`pu-btn ${shieldOn ? 'pu-active' : ''}`}
-            onClick={handleShield}
-            disabled={(me?.shield || 0) < 1}
-          >
-            🛡 Shield ({me?.shield || 0})
-          </button>
-          <button
-            className={`pu-btn ${ddOn ? 'pu-active' : ''}`}
-            onClick={handleDD}
-            disabled={(me?.dd || 0) < 1}
-          >
-            ✕2 Double ({me?.dd || 0})
-          </button>
+          <div className="player-round-pill">
+            <span className="round-pill-label">{isRevival ? 'REVIVAL' : 'ROUND'}</span>
+            <span className="round-pill-count">
+              {isRevival ? 'ROUND' : `${String(roundNum).padStart(2, '0')} / ${String(totalRounds).padStart(2, '0')}`}
+            </span>
+          </div>
         </div>
-      )}
 
-      <Equalizer frozen={locked} />
+        {/* ── 3. STRIKE WARNING (CONDITIONAL) ── */}
+        {strikeCount === 1 && !locked && (
+          <div className="player-strike-banner" role="alert">
+            <AlertTriangle className="strike-icon" size={16} />
+            <span className="strike-banner-text">
+              <strong>1 STRIKE WARNING:</strong> ONE MORE WRONG = ELIMINATED!
+            </span>
+          </div>
+        )}
 
-      <div className="hint">
-        {locked
-          ? '🔒 Locked — calculating results…'
-          : myChoiceId
-          ? '✓ Locked in — tap to change!'
-          : '👆 Tap fast for speed bonus points!'}
+        {/* ── 4. COUNTDOWN TIMER / LOCKED BADGE ── */}
+        <div className="player-timer-container">
+          {!locked ? (
+            <div className="player-timer-ring-wrapper">
+              <TimerRing
+                key={question?.id || roundKey}
+                totalSeconds={GREEN_DURATION_SECS}
+                resetKey={question?.id || roundKey}
+              />
+            </div>
+          ) : (
+            <div className="player-locked-badge">
+              <Lock size={20} className="lock-icon" />
+              <span className="locked-badge-text">ANSWERS LOCKED</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── 5. QUESTION CARD ── */}
+        <main className="player-question-section">
+          <div className="player-question-card">
+            <div className="question-card-tag">
+              {question?.category ? question.category.toUpperCase() : 'SURVIVAL QUESTION'}
+            </div>
+            <h1 className="player-question-title">
+              {question.text}
+            </h1>
+          </div>
+
+          {/* ── 6. 2×2 ANSWER GRID ── */}
+          <div className={`player-answer-grid ${locked ? 'grid-locked' : ''}`} role="group" aria-label="Answer options">
+            {shuffledOptions.map(([optId, text], i) => {
+              const isSelected = myChoiceId === optId;
+              const color = COLORS[i % COLORS.length];
+              const letter = LETTERS[i % LETTERS.length];
+
+              return (
+                <button
+                  key={optId}
+                  className={`player-answer-card ${isSelected ? 'is-selected' : ''} ${locked ? 'is-disabled' : ''}`}
+                  style={{
+                    '--card-color': color,
+                    borderColor: isSelected ? color : undefined,
+                  }}
+                  onClick={() => handleOptionClick(optId, text)}
+                  disabled={locked}
+                  aria-pressed={isSelected}
+                  aria-label={`Option ${letter}: ${text}`}
+                >
+                  <div className="option-badge-disc" style={{ backgroundColor: color }}>
+                    {letter}
+                  </div>
+                  <div className="option-text-wrap">
+                    <span className="option-text">{text}</span>
+                  </div>
+                  {isSelected && (
+                    <div className="option-selected-marker" style={{ backgroundColor: color }}>
+                      <Check size={14} color="#06120f" strokeWidth={3.5} />
+                    </div>
+                  )}
+                  {locked && !isSelected && (
+                    <div className="option-lock-indicator">
+                      <Lock size={12} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </main>
+
+        {/* ── 7. POWER-UPS ROW ── */}
+        <section className="player-powerups-section" aria-label="Power-ups">
+          <div className="player-powerups-row">
+            <button
+              className={`player-powerup-btn pu-shield ${shieldOn ? 'is-active' : ''}`}
+              onClick={handleShield}
+              disabled={locked || (me?.shield || 0) < 1}
+              aria-pressed={shieldOn}
+              title={me?.shield ? 'Absorb 1 wrong strike' : 'No shields remaining'}
+            >
+              <div className="pu-icon-disc">
+                <Shield size={16} />
+              </div>
+              <div className="pu-info">
+                <span className="pu-name">SHIELD</span>
+                <span className="pu-count">({me?.shield || 0})</span>
+              </div>
+            </button>
+
+            <button
+              className={`player-powerup-btn pu-doubledown ${ddOn ? 'is-active' : ''}`}
+              onClick={handleDD}
+              disabled={locked || (me?.dd || 0) < 1}
+              aria-pressed={ddOn}
+              title={me?.dd ? 'Double score for correct answer, -2 on wrong' : 'No double-downs remaining'}
+            >
+              <div className="pu-icon-disc">
+                <Zap size={16} />
+              </div>
+              <div className="pu-info">
+                <span className="pu-name">✕2 DOUBLE</span>
+                <span className="pu-count">({me?.dd || 0})</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        {/* ── 8. LIVE PROGRESS & FOOTER ── */}
+        <footer className="player-footer-section">
+          {/* Live response progress bar */}
+          <div className="player-progress-bar-wrap">
+            <div className="player-progress-meta">
+              <span className="progress-label">
+                <Radio size={13} className="radio-pulse" /> LIVE RESPONSES
+              </span>
+              <span className="progress-count">
+                <strong>{liveAnswersCount}</strong> / {effectiveTotal} ANSWERED
+              </span>
+            </div>
+            <div className="player-progress-track">
+              <div
+                className="player-progress-fill"
+                style={{ width: `${answerPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <Equalizer frozen={locked} />
+
+          {/* Gameplay tip banner */}
+          <div className={`player-tip-card ${locked ? 'tip-locked' : 'tip-active'}`}>
+            {locked ? (
+              <span>🔒 ANSWERS LOCKED · STAND BY FOR ROUND VERDICT…</span>
+            ) : myChoiceId ? (
+              <span>✓ CHOICE LOCKED IN · TAP ANY OPTION TO CHANGE BEFORE TIME RUNS OUT</span>
+            ) : (
+              <span>⚡ TAP FAST FOR UP TO +3 SPEED BONUS POINTS!</span>
+            )}
+          </div>
+        </footer>
       </div>
     </div>
   );
 }
+

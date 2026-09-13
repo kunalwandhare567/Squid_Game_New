@@ -24,7 +24,7 @@ export default function QRDisplay({ url, roomCode }) {
       </div>
 
       <div className="room-badge">
-        <span className="room-label">ROOM</span>
+        <span className="room-label">ROOM :</span>
         <strong className="room-code-val">{roomCode}</strong>
       </div>
     </div>

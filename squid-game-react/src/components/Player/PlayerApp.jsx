@@ -71,6 +71,10 @@ function PlayerController({ roomCode }) {
   }
 
   const currentRoundKey = meta.rkey || (meta.qIndex != null ? `r${meta.qIndex}` : 'r0');
+  const roundNum = meta.qIndex != null ? meta.qIndex + 1 : 1;
+  const totalRounds = meta.totalRounds || 7;
+  const aliveCount = Object.values(state?.players || {}).filter(p => p.alive && !p.spectator).length;
+  const totalCount = Object.values(state?.players || {}).filter(p => !p.spectator).length;
 
   let content = null;
 
@@ -92,6 +96,9 @@ function PlayerController({ roomCode }) {
           roomCode={roomCode} pid={pid}
           question={question} locked={false}
           me={me} roundKey="rev"
+          roundNum={roundNum} totalRounds={totalRounds}
+          aliveCount={aliveCount} totalCount={totalCount}
+          isRevival={true}
           myChoiceId={myChoiceId} setMyChoiceId={setMyChoiceId}
         />
       );
@@ -107,6 +114,9 @@ function PlayerController({ roomCode }) {
         roomCode={roomCode} pid={pid}
         question={question} locked={phase === 'locked'}
         me={me} roundKey={currentRoundKey}
+        roundNum={roundNum} totalRounds={totalRounds}
+        aliveCount={aliveCount} totalCount={totalCount}
+        isRevival={false}
         myChoiceId={myChoiceId} setMyChoiceId={setMyChoiceId}
       />
     );

@@ -4,7 +4,7 @@ import { useAudio } from '../../context/AudioContext';
 import { rankPlayers } from '../../utils/ruleEngine';
 import {
   Trophy, Medal, Award, Flame, CheckCircle2, RotateCcw,
-  Sparkles, Home, ChevronDown, ChevronUp, Users, Crown, Shield
+  Sparkles, ChevronDown, ChevronUp, Users, Crown, Shield
 } from 'lucide-react';
 
 export default function PlayerEnd({ me, players = {}, totalRounds = 7, pid }) {
@@ -101,13 +101,6 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 7, pid }) {
       msgBody: 'Learn, improve, and challenge again!',
     };
   }, [isFirst, isSecond, isThird, myRank]);
-
-  function handleHome() {
-    try {
-      sessionStorage.clear();
-    } catch (e) {}
-    window.location.href = window.location.origin + window.location.pathname;
-  }
 
   return (
     <div className={`player-scorecard-arena ${tierConfig.themeClass}`}>
@@ -226,14 +219,6 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 7, pid }) {
             })}
           </div>
         </section>
-
-        {/* ── 9. RETURN HOME ACTION ── */}
-        <footer className="scorecard-footer">
-          <button className="btn-scorecard-home" onClick={handleHome}>
-            <Home size={18} />
-            <span>Back to Home</span>
-          </button>
-        </footer>
       </div>
     </div>
   );

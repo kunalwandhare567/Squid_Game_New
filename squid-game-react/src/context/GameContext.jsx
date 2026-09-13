@@ -57,11 +57,11 @@ export function GameProvider({ roomCode, children }) {
 
         if (roomData && isMounted) {
           const metaObj = {
-            phase: roomData.phase,
-            qIndex: roomData.q_index,
-            roomCode: roomData.room_code,
             startedAt: roomData.started_at ? new Date(roomData.started_at).getTime() : Date.now(),
             ...(roomData.meta || {}),
+            phase: roomData.phase || roomData.meta?.phase || 'lobby',
+            qIndex: roomData.q_index != null ? roomData.q_index : roomData.meta?.qIndex,
+            roomCode: roomData.room_code,
           };
           dispatch({ type: 'SET_META', payload: metaObj });
           dispatch({ type: 'SET_QUESTION', payload: roomData.question || null });
@@ -114,11 +114,11 @@ export function GameProvider({ roomCode, children }) {
           const row = payload.new;
           if (!row || !isMounted) return;
           const metaObj = {
-            phase: row.phase,
-            qIndex: row.q_index,
-            roomCode: row.room_code,
             startedAt: row.started_at ? new Date(row.started_at).getTime() : Date.now(),
             ...(row.meta || {}),
+            phase: row.phase || row.meta?.phase || 'lobby',
+            qIndex: row.q_index != null ? row.q_index : row.meta?.qIndex,
+            roomCode: row.room_code,
           };
           dispatch({ type: 'SET_META', payload: metaObj });
           dispatch({ type: 'SET_QUESTION', payload: row.question || null });

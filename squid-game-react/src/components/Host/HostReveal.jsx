@@ -19,26 +19,41 @@ const ROUND_QUOTES = {
   7: 'THE FINAL MOMENT. CROWN THE CHAMPION.',
 };
 
-export default function HostReveal({ results, eliminations, survivors, question, answers, roundNum, totalRounds, onNext }) {
-  const isLast = roundNum >= totalRounds || survivors.length <= 1;
-  const isRevivalComing = roundNum === REVIVE_AFTER_ROUND && eliminations.length > 0;
+export default function HostReveal({
+  results = {},
+  eliminations = [],
+  survivors = [],
+  question = {},
+  answers = {},
+  roundNum = 1,
+  totalRounds = 7,
+  onNext
+}) {
+  const safeSurvivors = Array.isArray(survivors) ? survivors : [];
+  const safeEliminations = Array.isArray(eliminations) ? eliminations : [];
+  const safeResults = results || {};
+
+  const isLast = roundNum >= totalRounds || safeSurvivors.length <= 1;
+  const isRevivalComing = roundNum === REVIVE_AFTER_ROUND && safeEliminations.length > 0;
 
   const correctId = question?.correctId || 'opt_A';
   const correctIndex = ['opt_A', 'opt_B', 'opt_C', 'opt_D'].indexOf(correctId);
   const correctLetter = correctIndex >= 0 ? LETTERS[correctIndex] : 'A';
   const correctColor  = correctIndex >= 0 ? COLORS[correctIndex] : '#57ffb0';
-  const warningCount = survivors.filter(p => {
+  const correctText   = question?.correctAnswer || (correctId && question?.options?.[correctId]) || '';
+
+  const warningCount = safeSurvivors.filter(p => {
     const w = p.consecutiveWrong ?? p.consecutive_wrong ?? 0;
     return w > 0 && w < 3;
   }).length;
-  const totalInGame  = survivors.length + eliminations.length;
+  const totalInGame  = safeSurvivors.length + safeEliminations.length;
   const maxCapacity  = MAX_PLAYERS || 15;
 
   // Calculate round statistics
-  const shieldsUsed = Object.values(results || {}).filter(r => r?.shieldSaved || r?.shieldActive).length;
-  const ddUsedCount = Object.values(results || {}).filter(r => r?.ddUsed).length;
+  const shieldsUsed = Object.values(safeResults).filter(r => r?.shieldSaved || r?.shieldActive).length;
+  const ddUsedCount = Object.values(safeResults).filter(r => r?.ddUsed).length;
 
-  const quoteText = eliminations.length === 0
+  const quoteText = safeEliminations.length === 0
     ? '“ The arena showed mercy... this time. ”'
     : `“ ${ROUND_QUOTES[roundNum] || 'ONE ANSWER CAN CHANGE YOUR FATE.'} ”`;
 
@@ -76,7 +91,7 @@ export default function HostReveal({ results, eliminations, survivors, question,
 
           <div className="survival-big-metric">
             <div className="metric-number-row">
-              <span className="num-survivors">{survivors.length}</span>
+              <span className="num-survivors">{safeSurvivors.length}</span>
               <span className="num-slash">/</span>
               <span className="num-total">{totalInGame || maxCapacity}</span>
             </div>
@@ -87,7 +102,7 @@ export default function HostReveal({ results, eliminations, survivors, question,
           <div className="survival-meter-track">
             <div
               className="survival-meter-fill"
-              style={{ width: `${Math.max(10, (survivors.length / (totalInGame || maxCapacity)) * 100)}%` }}
+              style={{ width: `${Math.max(10, (safeSurvivors.length / (totalInGame || maxCapacity)) * 100)}%` }}
             />
           </div>
 
@@ -98,13 +113,13 @@ export default function HostReveal({ results, eliminations, survivors, question,
                 <span className="stat-indicator-dot dot-green" />
                 <span>SURVIVED</span>
               </div>
-              <strong className="stat-count-green">{survivors.length}</strong>
+              <strong className="stat-count-green">{safeSurvivors.length}</strong>
             </div>
 
             <div className="status-stat-row stat-warn-row">
               <div className="dot-with-label">
                 <span className="stat-indicator-dot dot-amber" />
-                <span>1-STRIKE WARNING</span>
+                <span>STRIKE WARNING</span>
               </div>
               <strong className="stat-count-amber">{warningCount}</strong>
             </div>
@@ -114,7 +129,7 @@ export default function HostReveal({ results, eliminations, survivors, question,
                 <span className="stat-indicator-dot dot-red" />
                 <span>ELIMINATED</span>
               </div>
-              <strong className="stat-count-red">{eliminations.length}</strong>
+              <strong className="stat-count-red">{safeEliminations.length}</strong>
             </div>
           </div>
         </div>
@@ -167,20 +182,20 @@ export default function HostReveal({ results, eliminations, survivors, question,
           <div className="col-header-bar">
             <div className="col-title-group">
               <span className="col-dot green" />
-              <h3>SURVIVORS ({survivors.length})</h3>
+              <h3>SURVIVORS ({safeSurvivors.length})</h3>
             </div>
             <span className="col-sub-badge">SAFE FOR NEXT ROUND</span>
           </div>
 
-          {survivors.length === 0 ? (
+          {safeSurvivors.length === 0 ? (
             <div className="empty-state-notice">
               <Skull size={32} color="#ff2d78" />
               <p>No survivors remaining in the main arena</p>
             </div>
           ) : (
             <div className="player-result-scroll-list">
-              {survivors.map((p, i) => {
-                const r = results?.[p.id];
+              {safeSurvivors.map((p, i) => {
+                const r = safeResults?.[p.id];
                 const rp = r?.points ?? 0;
                 const strikes = p.consecutiveWrong || p.consecutive_wrong || 0;
 
@@ -237,16 +252,16 @@ export default function HostReveal({ results, eliminations, survivors, question,
         </div>
 
         {/* ELIMINATED PANEL */}
-        <div className={`results-column-card eliminated-card ${eliminations.length > 0 ? 'elim-active' : 'elim-peace'}`}>
+        <div className={`results-column-card eliminated-card ${safeEliminations.length > 0 ? 'elim-active' : 'elim-peace'}`}>
           <div className="col-header-bar">
             <div className="col-title-group">
               <span className="col-dot red" />
-              <h3>ELIMINATED ({eliminations.length})</h3>
+              <h3>ELIMINATED ({safeEliminations.length})</h3>
             </div>
             <span className="col-sub-badge">CUT FROM MAIN ARENA</span>
           </div>
 
-          {eliminations.length === 0 ? (
+          {safeEliminations.length === 0 ? (
             <div className="empty-elim-celebration">
               <div className="peace-shield-icon">
                 <ShieldCheck size={44} color="#57ffb0" />
@@ -257,7 +272,7 @@ export default function HostReveal({ results, eliminations, survivors, question,
             </div>
           ) : (
             <div className="player-result-scroll-list">
-              {eliminations.map((p) => (
+              {safeEliminations.map((p) => (
                 <div key={p.id} className="player-result-row row-is-elim">
                   <span className="player-emoji-chip">{p.emoji || '👤'}</span>
 
@@ -273,7 +288,7 @@ export default function HostReveal({ results, eliminations, survivors, question,
                   <div className="player-verdict-tag-cell">
                     <span className="badge-eliminated-strike">
                       <Skull size={12} />
-                      💥 2 STRIKES
+                      💥 3 STRIKES
                     </span>
                   </div>
                 </div>

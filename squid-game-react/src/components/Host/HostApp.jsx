@@ -344,32 +344,36 @@ function HostController({ roomCode }) {
     // Apply updated player states to Supabase in batches (supports 500+ players)
     await batchUpdatePlayerStates(Object.values(newPlayerStates));
 
-    // Reveal correctId, correctAnswer, and change phase
-    await supabase.from('rooms').update({
-      phase: 'reveal',
-      question: {
-        id: q.id,
-        text: q.text,
-        options: q.options,
-        correctId: q.correctId,
-        correctAnswer: q.correctAnswer || (q.options ? q.options[q.correctId] : ''),
-        why: q.why,
-        revival: false,
-      },
-      meta: {
-        phase: 'reveal',
-        qIndex: roundIndex,
-        rkey: `r${roundIndex}`,
-        roomCode,
-        hostAlive: true,
-        maxPlayers: MAX_PLAYERS,
-        minPlayers: MIN_PLAYERS,
-      },
-      updated_at: new Date().toISOString(),
-    }).eq('room_code', roomCode);
-
     setRevealData({ results, eliminations, survivors, question: q, answers });
     setPhase('reveal');
+
+    // Reveal correctId, correctAnswer, and change phase
+    try {
+      await supabase.from('rooms').update({
+        phase: 'reveal',
+        question: {
+          id: q.id,
+          text: q.text,
+          options: q.options,
+          correctId: q.correctId,
+          correctAnswer: q.correctAnswer || (q.options ? q.options[q.correctId] : ''),
+          why: q.why,
+          revival: false,
+        },
+        meta: {
+          phase: 'reveal',
+          qIndex: roundIndex,
+          rkey: `r${roundIndex}`,
+          roomCode,
+          hostAlive: true,
+          maxPlayers: MAX_PLAYERS,
+          minPlayers: MIN_PLAYERS,
+        },
+        updated_at: new Date().toISOString(),
+      }).eq('room_code', roomCode);
+    } catch (err) {
+      console.error('Error updating room to reveal:', err);
+    }
 
     if (eliminations.length > 0) audio.sfxEliminated();
     else audio.sfxCorrect();
@@ -392,33 +396,38 @@ function HostController({ roomCode }) {
       await batchUpdatePlayerStates(revivedList);
     }
 
-    // Reveal correctId and change phase
-    await supabase.from('rooms').update({
-      phase: 'revreveal',
-      question: {
-        id: q.id,
-        text: q.text,
-        options: q.options,
-        correctId: q.correctId,
-        correctAnswer: q.correctAnswer || (q.options ? q.options[q.correctId] : ''),
-        why: q.why,
-        revival: true,
-      },
-      meta: {
-        phase: 'revreveal',
-        qIndex: REVIVE_AFTER_ROUND,
-        rkey: 'rev',
-        roomCode,
-        hostAlive: true,
-        maxPlayers: MAX_PLAYERS,
-        minPlayers: MIN_PLAYERS,
-      },
-      updated_at: new Date().toISOString(),
-    }).eq('room_code', roomCode);
-
     setRevivalResult({ revivedIds, question: q });
     setRevivalDone(true);
     setPhase('revreveal');
+
+    // Reveal correctId and change phase
+    try {
+      await supabase.from('rooms').update({
+        phase: 'revreveal',
+        question: {
+          id: q.id,
+          text: q.text,
+          options: q.options,
+          correctId: q.correctId,
+          correctAnswer: q.correctAnswer || (q.options ? q.options[q.correctId] : ''),
+          why: q.why,
+          revival: true,
+        },
+        meta: {
+          phase: 'revreveal',
+          qIndex: REVIVE_AFTER_ROUND,
+          rkey: 'rev',
+          roomCode,
+          hostAlive: true,
+          maxPlayers: MAX_PLAYERS,
+          minPlayers: MIN_PLAYERS,
+        },
+        updated_at: new Date().toISOString(),
+      }).eq('room_code', roomCode);
+    } catch (err) {
+      console.error('Error updating room to revreveal:', err);
+    }
+
     if (revivedIds.length > 0) audio.sfxRevival();
   }
 
@@ -529,9 +538,13 @@ function HostController({ roomCode }) {
           />
         )}
 
-        {phase === 'reveal' && revealData && (
+        {phase === 'reveal' && (
           <HostReveal
-            {...revealData}
+            results={revealData?.results || {}}
+            eliminations={revealData?.eliminations || getPlayers('dead')}
+            survivors={revealData?.survivors || getPlayers('alive')}
+            question={revealData?.question || gameQuestions[roundIndex] || state.question || {}}
+            answers={revealData?.answers || state.answers || {}}
             roundNum={roundIndex + 1}
             totalRounds={ROUNDS}
             onNext={handleNext}

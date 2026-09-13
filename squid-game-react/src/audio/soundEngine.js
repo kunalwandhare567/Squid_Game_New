@@ -97,12 +97,14 @@ export function stopBeat() {
 
 export function say(text) {
   if (!isVoiceOn || isMuted) return;
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   try {
+    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.05;
+    u.rate = 1.0;
+    u.pitch = 1.0;
     u.lang = 'en-US';
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+    window.speechSynthesis.speak(u);
   } catch (e) {}
 }
 

@@ -20,14 +20,18 @@ export default function HostPodium({ players, onRestart }) {
   const second = allPlayers[1] || null;
   const third  = allPlayers[2] || null;
 
+  const announcedRef = useRef(false);
+
   useEffect(() => {
-    if (winner && winner.name) {
-      setTimeout(() => {
+    if (!announcedRef.current && winner && winner.name) {
+      announcedRef.current = true;
+      const t = setTimeout(() => {
         audio.sfxWin();
         audio.say(`${winner.name} wins the Squid Game with ${winner.score || 0} points!`);
       }, 600);
+      return () => clearTimeout(t);
     }
-  }, [winner]);
+  }, []);
 
   const handleShare = () => {
     try {

@@ -84,8 +84,31 @@ function HostController({ roomCode }) {
     if (phase !== 'question' && phase !== 'revival') return;
     const rkey = isRevival ? 'rev' : `r${roundIndex}`;
 
+    async function fetchInitialAnswers() {
+      try {
+        const { data } = await supabase
+          .from('answers')
+          .select('*')
+          .eq('room_code', roomCode)
+          .eq('round_key', rkey);
+
+        if (data) {
+          data.forEach(row => {
+            answersRef.current[row.player_id] = {
+              choiceId: row.choice_id,
+              submittedAt: row.submitted_at ? new Date(row.submitted_at).getTime() : Date.now(),
+              shieldOn: !!row.shield_on,
+              ddOn: !!row.dd_on,
+            };
+          });
+          dispatch({ type: 'SET_ANSWERS', payload: { ...answersRef.current } });
+        }
+      } catch (err) {}
+    }
+    fetchInitialAnswers();
+
     const channel = supabase
-      .channel(`answers-${roomCode}-${rkey}`)
+      .channel(`answers-${roomCode}-${rkey}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'answers', filter: `room_code=eq.${roomCode}` },
@@ -98,6 +121,7 @@ function HostController({ roomCode }) {
               shieldOn: !!row.shield_on,
               ddOn: !!row.dd_on,
             };
+            dispatch({ type: 'SET_ANSWERS', payload: { ...answersRef.current } });
           }
         }
       )
@@ -409,8 +433,6 @@ function HostController({ roomCode }) {
         updated_at: new Date().toISOString(),
       }).eq('room_code', roomCode);
       setPhase('gameover');
-      audio.sfxWin();
-      audio.say(`${determineWinner(getPlayers('all'))?.name || 'The winner'} wins the game!`);
       return;
     }
 
@@ -501,6 +523,7 @@ function HostController({ roomCode }) {
             totalRounds={ROUNDS}
             isRevival={isRevival}
             aliveCount={getPlayers(isRevival ? 'dead' : 'alive').length}
+            roomCode={roomCode}
             onLock={handleLock}
             onLightChange={setHostLight}
           />

@@ -6,6 +6,7 @@ import {
 import { useGame } from '../../context/GameContext';
 import { useAudio } from '../../context/AudioContext';
 import { ANSWER_FRAC, GREEN_DURATION_SECS } from '../../utils/ruleEngine';
+import { supabase } from '../../supabase';
 import DollSvg from '../Shared/DollSvg';
 import TimerRing from '../Shared/TimerRing';
 
@@ -28,6 +29,7 @@ export default function HostQuestion({
   totalRounds,
   isRevival,
   aliveCount,
+  roomCode,
   onLock,
   onLightChange
 }) {
@@ -57,13 +59,64 @@ export default function HostQuestion({
     onLightChange?.(light);
   }, [light, onLightChange]);
 
-  // Watch live answer count (if 60% answer, arm early)
+  const rkey = isRevival ? 'rev' : `r${roundNum - 1}`;
+  const effectiveRoomCode = roomCode || state.meta?.roomCode || state.meta?.room_code;
+
+  // Real-time Supabase answer count tracker with fast polling fallback
+  useEffect(() => {
+    if (!effectiveRoomCode) return;
+    let isMounted = true;
+
+    async function syncAnswers() {
+      try {
+        const { data } = await supabase
+          .from('answers')
+          .select('player_id')
+          .eq('room_code', effectiveRoomCode)
+          .eq('round_key', rkey);
+
+        if (data && isMounted) {
+          const count = data.length;
+          setAnsCount(prev => Math.max(prev, count));
+          const threshold = Math.ceil(aliveCount * ANSWER_FRAC);
+          if (count >= threshold && !armedRef.current) arm();
+        }
+      } catch (e) {}
+    }
+
+    syncAnswers();
+    const pollInterval = setInterval(syncAnswers, 400);
+
+    const channel = supabase
+      .channel(`hq-answers-${effectiveRoomCode}-${rkey}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'answers', filter: `room_code=eq.${effectiveRoomCode}` },
+        payload => {
+          const row = payload.new;
+          if (row && row.round_key === rkey) {
+            syncAnswers();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveRoomCode, rkey, aliveCount]);
+
+  // Also observe state.answers from GameContext
   useEffect(() => {
     const answers = state.answers || {};
     const count   = Object.keys(answers).length;
-    setAnsCount(count);
-    const threshold = Math.ceil(aliveCount * ANSWER_FRAC);
-    if (count >= threshold && !armedRef.current) arm();
+    if (count > 0) {
+      setAnsCount(prev => Math.max(prev, count));
+      const threshold = Math.ceil(aliveCount * ANSWER_FRAC);
+      if (count >= threshold && !armedRef.current) arm();
+    }
   }, [state.answers, aliveCount]);
 
   // Main 10-Second Timeline: 0-5s Solid Green, 5-10s Fast Alert & Red Blink, 10s Hard Stop

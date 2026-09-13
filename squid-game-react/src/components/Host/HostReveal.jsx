@@ -27,9 +27,10 @@ export default function HostReveal({ results, eliminations, survivors, question,
   const correctIndex = ['opt_A', 'opt_B', 'opt_C', 'opt_D'].indexOf(correctId);
   const correctLetter = correctIndex >= 0 ? LETTERS[correctIndex] : 'A';
   const correctColor  = correctIndex >= 0 ? COLORS[correctIndex] : '#57ffb0';
-  const correctText   = question?.correctAnswer || (correctId && question?.options?.[correctId]) || '';
-
-  const warningCount = survivors.filter(p => (p.consecutiveWrong || p.consecutive_wrong) === 1).length;
+  const warningCount = survivors.filter(p => {
+    const w = p.consecutiveWrong ?? p.consecutive_wrong ?? 0;
+    return w > 0 && w < 3;
+  }).length;
   const totalInGame  = survivors.length + eliminations.length;
   const maxCapacity  = MAX_PLAYERS || 15;
 
@@ -211,7 +212,12 @@ export default function HostReveal({ results, eliminations, survivors, question,
                     </div>
 
                     <div className="player-verdict-tag-cell">
-                      {strikes === 1 ? (
+                      {strikes === 2 ? (
+                        <span className="badge-warning-strike" style={{ background: 'rgba(255, 45, 120, 0.2)', borderColor: '#ff2d78', color: '#ff6b9d' }}>
+                          <AlertTriangle size={12} color="#ff2d78" />
+                          2 STRIKES
+                        </span>
+                      ) : strikes === 1 ? (
                         <span className="badge-warning-strike">
                           <AlertTriangle size={12} />
                           1 STRIKE

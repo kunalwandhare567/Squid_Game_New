@@ -220,12 +220,27 @@ export default function PlayerAnswer({
           </div>
         </div>
 
-        {/* ── 3. STRIKE WARNING (CONDITIONAL) ── */}
-        {strikeCount === 1 && !locked && (
+        {/* ── 3. STRIKE WARNING / REVIVAL BANNER ── */}
+        {isRevival && (
+          <div className="player-revival-banner" role="status" style={{ background: 'rgba(58, 160, 255, 0.18)', border: '1.5px solid #3aa0ff', borderRadius: '12px', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#93c5fd', fontSize: 'clamp(11px, 2.4vw, 13px)', fontWeight: 800 }}>
+            <span>⭐ REVIVAL CHANCE · FASTEST CORRECT ANSWERS REJOIN THE GAME!</span>
+          </div>
+        )}
+
+        {strikeCount === 1 && !locked && !isRevival && (
           <div className="player-strike-banner" role="alert">
             <AlertTriangle className="strike-icon" size={16} />
             <span className="strike-banner-text">
-              <strong>1 STRIKE WARNING:</strong> ONE MORE WRONG = ELIMINATED!
+              <strong>1 STRIKE:</strong> 2 STRIKES LEFT BEFORE ELIMINATION
+            </span>
+          </div>
+        )}
+
+        {strikeCount >= 2 && !locked && !isRevival && (
+          <div className="player-strike-banner banner-danger" role="alert" style={{ background: 'rgba(255, 45, 120, 0.18)', borderColor: '#ff2d78', color: '#ff6b9d' }}>
+            <AlertTriangle className="strike-icon" size={16} color="#ff2d78" />
+            <span className="strike-banner-text">
+              <strong>⚠️ 2 STRIKES WARNING:</strong> ONE MORE WRONG = PERMANENT ELIMINATION!
             </span>
           </div>
         )}

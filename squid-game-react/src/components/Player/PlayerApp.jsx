@@ -83,12 +83,19 @@ function PlayerController({ roomCode }) {
   } else if (isSpec) {
     content = <PlayerSpectate phase={phase} question={question} />;
   } else if (phase === 'lobby') {
-    content = <PlayerWait me={me} />;
+    content = <PlayerWait me={me} title="🎮 IN LOBBY" message="You're connected! Waiting for the host to start the game…" type="lobby" />;
   } else if (phase === 'gameover') {
     content = <PlayerEnd me={me} />;
   } else if (phase === 'revival') {
     if (!isEliminated) {
-      content = <PlayerWait me={me} message="Revival round — eliminated players are competing. Sit tight…" />;
+      content = (
+        <PlayerWait
+          me={me}
+          type="safe"
+          title="🛡️ YOU ARE SAFE & ADVANCING!"
+          message="You survived! Eliminated players are currently competing in a 1-question Revival Challenge. Round 3 will begin immediately after."
+        />
+      );
     } else {
       content = (
         <PlayerAnswer
@@ -105,8 +112,20 @@ function PlayerController({ roomCode }) {
     }
   } else if (phase === 'revreveal') {
     content = <PlayerRevival me={me} />;
-  } else if (phase === 'question' && isEliminated) {
-    content = <PlayerWait me={me} message="You're eliminated. Watch on the big screen — revival round may save you!" />;
+  } else if ((phase === 'question' || phase === 'locked') && isEliminated) {
+    const hasUpcomingRevival = roundNum <= 2;
+    content = (
+      <PlayerWait
+        me={me}
+        type="eliminated"
+        title="💀 ELIMINATED (3 STRIKES)"
+        message={
+          hasUpcomingRevival
+            ? "You reached 3 consecutive wrong answers and are out. Watch the big screen — you will get ONE chance in the Revival Round after Round 2 to re-enter!"
+            : "You were eliminated after 3 consecutive wrong answers and cannot continue. Watch the remaining finalists compete on the big screen!"
+        }
+      />
+    );
   } else if (phase === 'question' || phase === 'locked') {
     content = (
       <PlayerAnswer

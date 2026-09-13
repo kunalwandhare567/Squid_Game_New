@@ -7,7 +7,7 @@ export const BASE_POINTS            = 2;
 export const SPEED_BONUS_MAX        = 3;
 export const BONUS_WINDOW_MS        = 10000; // 10s window (5s green + 5s blink)
 export const ELIM_RATIO             = 4;      // bottom 1-in-4 eliminated
-export const CONSECUTIVE_WRONG_LIMIT = 2;     // 2 consecutive wrong = eliminate
+export const CONSECUTIVE_WRONG_LIMIT = 3;     // 3 consecutive wrong = eliminate
 export const MIN_PLAYERS            = 5;      // min 5 players to start
 export const MAX_PLAYERS            = 15;     // max 15 active players
 export const ROUNDS                 = 7;
@@ -86,7 +86,7 @@ export function computeRoundScore(answer, questionOrCorrect, greenStartAt, isRev
  * resolveRound
  * The core elimination engine.
  *   Layer 1 — evaluate each player's answer (text-verified & ID-verified)
- *   Layer 2 — 2 consecutive wrong answers = eliminate (unless saved by shield)
+ *   Layer 2 — 3 consecutive wrong answers = eliminate (unless saved by shield)
  *
  * @param {object[]} players           - Array of { id, name, emoji, score, shield, consecutiveWrong, alive }
  * @param {object}   answers           - { [playerId]: { choiceId, choiceText, submittedAt, ddOn, shieldOn } }
@@ -131,19 +131,19 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
     };
   }
 
-  // ── PASS 2: Eliminate players reaching 2 consecutive wrong answers ────
+  // ── PASS 2: Eliminate players reaching 3 consecutive wrong answers ────
   for (const player of alivePlayers) {
     const r = results[player.id];
     const ps = playerStates[player.id];
 
     if (r.consecutiveWrong >= CONSECUTIVE_WRONG_LIMIT) {
-      // Shield check: shield can absorb the 2nd strike!
+      // Shield check: shield can absorb the 3rd strike!
       if (r.shieldActive && (player.shield || 0) >= 1) {
         r.shieldSaved        = true;
         ps.shield            = Math.max(0, (player.shield || 0) - 1);
-        r.consecutiveWrong   = 1;
-        ps.consecutiveWrong  = 1;
-        ps.consecutive_wrong = 1;
+        r.consecutiveWrong   = CONSECUTIVE_WRONG_LIMIT - 1;
+        ps.consecutiveWrong  = CONSECUTIVE_WRONG_LIMIT - 1;
+        ps.consecutive_wrong = CONSECUTIVE_WRONG_LIMIT - 1;
         ps.alive             = true;
       } else {
         r.autoEliminated     = true;

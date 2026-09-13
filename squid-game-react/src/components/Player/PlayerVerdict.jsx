@@ -49,7 +49,14 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
 
   const isAlive   = Boolean(me?.alive !== false);
   const strikes   = Number(me?.consecutiveWrong ?? me?.consecutive_wrong ?? 0);
-  const isEliminated = !isAlive || (!isCorrect && strikes >= 2);
+  const isEliminated = !isAlive || (!isCorrect && strikes >= 3);
+
+  // Extract round number from roundKey (e.g. 'r1' -> 2)
+  const roundNum = useMemo(() => {
+    if (!roundKey) return 1;
+    const match = String(roundKey).match(/\d+/);
+    return match ? parseInt(match[0], 10) + 1 : 1;
+  }, [roundKey]);
 
   // Trigger audio feedback once on verdict reveal
   useEffect(() => {
@@ -59,11 +66,14 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
     } else if (isEliminated) {
       audio.sfxEliminated();
       audio.say('You are eliminated from the game.');
+    } else if (strikes >= 2) {
+      audio.sfxWrong();
+      audio.say('Incorrect. Warning — two strikes received. One more wrong answer and you are out.');
     } else {
       audio.sfxWrong();
-      audio.say('Incorrect. Warning — one more wrong answer and you are out.');
+      audio.say('Incorrect. Strike one. Two strikes remaining.');
     }
-  }, [isCorrect, isEliminated]);
+  }, [isCorrect, isEliminated, strikes]);
 
   // ── CASE 1: CORRECT & SAFE ───────────────────────────────────────────
   if (isCorrect) {
@@ -97,8 +107,10 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
     );
   }
 
-  // ── CASE 2: ELIMINATED (2 STRIKES) ──────────────────────────────────
+  // ── CASE 2: ELIMINATED (3 STRIKES) ──────────────────────────────────
   if (isEliminated) {
+    const hasRevivalChance = roundNum <= REVIVE_AFTER_ROUND;
+
     return (
       <div className="verdict-screen center">
         <div className="skull">💀</div>
@@ -107,7 +119,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
         <div className="verdict-card verdict-card-elim">
           <div className="elim-alert-pill">
             <Skull size={16} />
-            <span>2 Consecutive Strikes</span>
+            <span>3 Consecutive Strikes</span>
           </div>
 
           <div className="verdict-card-row">
@@ -126,18 +138,30 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
           )}
         </div>
 
-        <div className="revival-notice-box">
-          <span className="rev-icon">⭐</span>
-          <div>
-            <strong>Revival Round Coming Soon!</strong>
-            <p>Eliminated players get a chance to re-enter the game after Round {REVIVE_AFTER_ROUND}. Stay tuned!</p>
+        {hasRevivalChance ? (
+          <div className="revival-notice-box">
+            <span className="rev-icon">⭐</span>
+            <div>
+              <strong>Revival Round Coming Soon!</strong>
+              <p>Eliminated players get ONE chance to re-enter the game after Round {REVIVE_AFTER_ROUND}. Stay tuned!</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="revival-notice-box" style={{ borderColor: 'rgba(255, 90, 90, 0.4)', background: 'rgba(255, 45, 120, 0.1)' }}>
+            <span className="rev-icon">🔒</span>
+            <div>
+              <strong>Eliminated Permanently</strong>
+              <p>You have used all strikes and the revival window has ended. Watch the remaining finalists on the big screen!</p>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  // ── CASE 3: INCORRECT ON 1ST STRIKE (WARNING - STILL SAFE) ───────────
+  // ── CASE 3: INCORRECT (1 OR 2 STRIKES - STILL SAFE) ──────────────────
+  const isSecondStrike = strikes >= 2;
+
   return (
     <div className="verdict-screen center">
       <DollSvg phase="red" />
@@ -146,9 +170,13 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
       </div>
 
       <div className="verdict-card verdict-card-warn">
-        <div className="strike-warning-banner">
-          <AlertTriangle size={18} color="#f7b733" />
-          <span>1 STRIKE RECEIVED (1 More = Eliminated)</span>
+        <div className="strike-warning-banner" style={{ background: isSecondStrike ? 'rgba(255, 45, 120, 0.18)' : undefined, borderColor: isSecondStrike ? '#ff2d78' : undefined, color: isSecondStrike ? '#ff6b9d' : undefined }}>
+          <AlertTriangle size={18} color={isSecondStrike ? '#ff2d78' : '#f7b733'} />
+          <span>
+            {isSecondStrike
+              ? '⚠️ 2 STRIKES (FINAL WARNING: 1 MORE WRONG = ELIMINATED)'
+              : '1 STRIKE RECEIVED (2 Strikes Remaining)'}
+          </span>
         </div>
 
         <div className="verdict-card-row">
@@ -171,8 +199,10 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
         <span>Current Score: <strong>{me?.score || 0} pts</strong></span>
       </div>
 
-      <p className="verdict-footer-note" style={{ color: '#ffd257' }}>
-        ⚠️ You survived this round on 1 Strike. Answer correctly on the next round to clear strikes!
+      <p className="verdict-footer-note" style={{ color: isSecondStrike ? '#ff6b9d' : '#ffd257' }}>
+        {isSecondStrike
+          ? '🚨 DANGER: You are on 2 Strikes! Answer correctly on the next round to stay in the game!'
+          : '⚠️ You survived this round on 1 Strike. Answer correctly on the next round to clear strikes!'}
       </p>
     </div>
   );

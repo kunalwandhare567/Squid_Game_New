@@ -7,7 +7,7 @@ import {
   Sparkles, ChevronDown, ChevronUp, Users, Crown, Shield
 } from 'lucide-react';
 
-export default function PlayerEnd({ me, players = {}, totalRounds = 7, pid }) {
+export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
   const audio = useAudio();
   const [showFullLeaderboard, setShowFullLeaderboard] = useState(false);
 

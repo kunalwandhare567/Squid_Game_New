@@ -18,13 +18,27 @@ import HostQuestion from './HostQuestion';
 import HostReveal   from './HostReveal';
 import HostRevival  from './HostRevival';
 import HostPodium   from './HostPodium';
-import { Volume2, VolumeX, Power } from 'lucide-react';
+import HostAuthGate, { isHostAuthenticated } from './HostAuthGate';
+import { Volume2, VolumeX, Power, AlertTriangle } from 'lucide-react';
 
 const EMOJIS = ['🦊','🐼','🦉','🐙','🐝','🦄','🐢','🦁','🐧','🦋','🐸','🦕','🐳','🦥','🐡','🦩','🐨','🦔','🐯','🦦','🐬','🦚','🐞','🦇'];
 const BOT_NAMES = ['Ravi','Meera','Aryan','Divya','Shrish','Kabir','Anya','Rohan','Sara','Vik','Nisha','Dev','Tara','Arjun'];
 
 export default function HostApp() {
   const [roomCode]  = useState(generateRoomCode);
+  const [authorized, setAuthorized] = useState(() => isHostAuthenticated());
+
+  if (!authorized) {
+    return (
+      <HostAuthGate
+        onAuthorized={() => setAuthorized(true)}
+        onCancel={() => {
+          window.location.href = window.location.origin + window.location.pathname;
+        }}
+      />
+    );
+  }
+
   return (
     <GameProvider roomCode={roomCode}>
       <HostController roomCode={roomCode} />
@@ -49,6 +63,7 @@ function HostController({ roomCode }) {
   const [botCount,     setBotCount]     = useState(0);
   const [greenStartAt, setGreenStartAt] = useState(0);
   const [hostLight,    setHostLight]    = useState('green');
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const lockGuard = useRef(false); // prevents double-lockIn
   const answersRef= useRef({});
@@ -498,7 +513,7 @@ function HostController({ roomCode }) {
         <button className="icon-btn" onClick={toggleMute} title="Sound">
           {isMuted ? <VolumeX size={18} color="#ff8a8a" /> : <Volume2 size={18} color="#57ffb0" />}
         </button>
-        <button className="icon-btn" onClick={() => confirm('Exit game?') && handleRestart()} title="Exit">
+        <button className="icon-btn" onClick={() => setShowExitConfirm(true)} title="Exit">
           <Power size={18} color="#ff2d78" />
         </button>
       </div>
@@ -517,8 +532,8 @@ function HostController({ roomCode }) {
       <div className="tint-layer" />
       <div className="flash-layer" id="flash-layer" />
 
-      <div className="host-root">
-        {topControls}
+      <div className={`host-root ${phase === 'reveal' ? 'host-root-full' : ''}`}>
+        {phase !== 'reveal' && topControls}
 
         {phase === 'lobby' && (
           <HostLobby
@@ -549,11 +564,16 @@ function HostController({ roomCode }) {
             results={revealData?.results || {}}
             eliminations={revealData?.eliminations || getPlayers('dead')}
             survivors={revealData?.survivors || getPlayers('alive')}
+            players={state.players || {}}
             question={revealData?.question || gameQuestions[roundIndex] || state.question || {}}
             answers={revealData?.answers || state.answers || {}}
             roundNum={roundIndex + 1}
             totalRounds={ROUNDS}
+            roomCode={roomCode}
             onNext={handleNext}
+            onToggleMute={toggleMute}
+            isMuted={isMuted}
+            onExit={() => setShowExitConfirm(true)}
           />
         )}
 
@@ -570,6 +590,44 @@ function HostController({ roomCode }) {
             players={state.players}
             onRestart={handleRestart}
           />
+        )}
+
+        {/* ── Custom Cinematic Squid Game Exit Confirmation Modal ── */}
+        {showExitConfirm && (
+          <div className="exit-modal-overlay" onClick={() => setShowExitConfirm(false)}>
+            <div className="exit-modal-box animate-pop-in" onClick={e => e.stopPropagation()}>
+              <div className="exit-modal-ambient-geo">
+                <span className="geo-icon pink">○</span>
+                <span className="geo-icon blue">△</span>
+                <span className="geo-icon green">□</span>
+              </div>
+
+              <div className="exit-modal-icon-wrap">
+                <AlertTriangle size={36} color="#ff2d78" />
+              </div>
+
+              <h3 className="exit-modal-title">TERMINATE ARENA SESSION?</h3>
+              <p className="exit-modal-desc">
+                Are you sure you want to exit? The current game room, player scores, and survival progress will be completely reset.
+              </p>
+
+              <div className="exit-modal-actions">
+                <button className="btn-exit-cancel" onClick={() => setShowExitConfirm(false)}>
+                  CANCEL & RESUME
+                </button>
+                <button
+                  className="btn-exit-confirm"
+                  onClick={() => {
+                    setShowExitConfirm(false);
+                    handleRestart();
+                  }}
+                >
+                  <Power size={15} />
+                  <span>YES, EXIT GAME</span>
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

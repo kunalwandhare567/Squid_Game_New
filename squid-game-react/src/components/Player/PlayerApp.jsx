@@ -75,7 +75,7 @@ function PlayerController({ roomCode }) {
 
   const currentRoundKey = meta.rkey || (meta.qIndex != null ? `r${meta.qIndex}` : 'r0');
   const roundNum = meta.qIndex != null ? meta.qIndex + 1 : 1;
-  const totalRounds = meta.totalRounds || 7;
+  const totalRounds = meta.totalRounds || 10;
   const aliveCount = Object.values(state?.players || {}).filter(p => p.alive && !p.spectator).length;
   const totalCount = Object.values(state?.players || {}).filter(p => !p.spectator).length;
 

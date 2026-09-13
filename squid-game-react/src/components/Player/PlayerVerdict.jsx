@@ -5,7 +5,7 @@ import DollSvg from '../Shared/DollSvg';
 import { CheckCircle, XCircle, AlertTriangle, Skull, Award, HelpCircle } from 'lucide-react';
 import { REVIVE_AFTER_ROUND } from '../../utils/ruleEngine';
 
-export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode, roundNum: propRoundNum, totalRounds = 7, onVerdictResult }) {
+export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode, roundNum: propRoundNum, totalRounds = 10, onVerdictResult }) {
   const audio = useAudio();
 
   // Retrieve user's submitted choice ID

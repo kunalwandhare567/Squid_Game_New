@@ -439,6 +439,12 @@ function HostController({ roomCode }) {
     if (nextIndex >= ROUNDS || aliveCount <= 1) {
       await supabase.from('rooms').update({
         phase: 'gameover',
+        meta: {
+          phase: 'gameover',
+          roomCode,
+          totalRounds: ROUNDS,
+          roundsPlayed: ROUNDS,
+        },
         updated_at: new Date().toISOString(),
       }).eq('room_code', roomCode);
       setPhase('gameover');

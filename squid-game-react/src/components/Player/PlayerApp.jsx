@@ -32,7 +32,7 @@ function PlayerController({ roomCode }) {
   const [myChoiceId,setMyChoiceId]= useState(null);
 
   const meta     = state?.meta || {};
-  const phase    = state?.phase || 'lobby';
+  const phase    = state?.phase || state?.meta?.phase || meta?.phase || 'lobby';
   const question = state?.question || null;
   const me       = state?.players?.[pid] || null;
 
@@ -157,6 +157,8 @@ function PlayerController({ roomCode }) {
         myChoiceId={myChoiceId}
         roundKey={currentRoundKey}
         roomCode={roomCode}
+        roundNum={roundNum}
+        totalRounds={totalRounds}
         onVerdictResult={setVerdictStatus}
       />
     );

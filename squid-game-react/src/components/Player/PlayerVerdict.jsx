@@ -5,7 +5,7 @@ import DollSvg from '../Shared/DollSvg';
 import { CheckCircle, XCircle, AlertTriangle, Skull, Award, HelpCircle } from 'lucide-react';
 import { REVIVE_AFTER_ROUND } from '../../utils/ruleEngine';
 
-export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode, onVerdictResult }) {
+export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode, roundNum: propRoundNum, totalRounds = 7, onVerdictResult }) {
   const audio = useAudio();
 
   // Retrieve user's submitted choice ID
@@ -53,10 +53,13 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
 
   // Extract round number from roundKey (e.g. 'r1' -> 2)
   const roundNum = useMemo(() => {
+    if (propRoundNum) return propRoundNum;
     if (!roundKey) return 1;
     const match = String(roundKey).match(/\d+/);
     return match ? parseInt(match[0], 10) + 1 : 1;
-  }, [roundKey]);
+  }, [propRoundNum, roundKey]);
+
+  const isLastRound = roundNum >= totalRounds;
 
   // Trigger audio feedback and notify parent of verdict result once on reveal
   useEffect(() => {
@@ -65,10 +68,17 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
 
     if (isCorrect) {
       audio.sfxCorrect();
-      audio.say('Correct answer! You survived.');
+      if (isLastRound) {
+        audio.say('Correct answer! You completed the final round!');
+      } else {
+        audio.say('Correct answer! You survived.');
+      }
     } else if (isEliminated) {
       audio.sfxEliminated();
       audio.say('You are eliminated from the game.');
+    } else if (isLastRound) {
+      audio.sfxWrong();
+      audio.say('Incorrect answer. Final round complete! Preparing the final podium results.');
     } else if (strikes >= 2) {
       audio.sfxWrong();
       audio.say('Incorrect. Warning — two strikes received. One more wrong answer and you are out.');
@@ -76,7 +86,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
       audio.sfxWrong();
       audio.say('Incorrect. Strike one. Two strikes remaining.');
     }
-  }, [isCorrect, isEliminated, strikes, onVerdictResult]);
+  }, [isCorrect, isEliminated, isLastRound, strikes, onVerdictResult]);
 
   // ── CASE 1: CORRECT & SAFE ───────────────────────────────────────────
   if (isCorrect) {
@@ -84,7 +94,9 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
       <div className="verdict-screen center verdict-safe-screen">
         <ConfettiCanvas active />
         <div className="cele-badge">✓</div>
-        <div className="verdict verdict-safe">CORRECT & SAFE! 🎉</div>
+        <div className="verdict verdict-safe">
+          {isLastRound ? 'CORRECT! ROUND 7 COMPLETE 🎉' : 'CORRECT & SAFE! 🎉'}
+        </div>
 
         <div className="verdict-card verdict-card-safe">
           <div className="verdict-card-row">
@@ -104,7 +116,9 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
         </div>
 
         <p className="verdict-footer-note">
-          🟢 You survived this round! The next question will appear on the big screen soon…
+          {isLastRound
+            ? '🏁 Game complete! Watch the big screen for the Champion Podium and your Final Scorecard!'
+            : '🟢 You survived this round! The next question will appear on the big screen soon…'}
         </p>
       </div>
     );
@@ -154,7 +168,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
             <span className="rev-icon">🔒</span>
             <div>
               <strong>Eliminated Permanently</strong>
-              <p>You have used all strikes and the revival window has ended. Watch the remaining finalists on the big screen!</p>
+              <p>You have used all strikes. Watch the remaining finalists on the big screen!</p>
             </div>
           </div>
         )}
@@ -169,18 +183,25 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
     <div className="verdict-screen center verdict-wrong-screen">
       <DollSvg phase="red" />
       <div className="verdict verdict-out" style={{ color: '#ff2d78' }}>
-        INCORRECT!
+        {isLastRound ? 'INCORRECT (ROUND 7)' : 'INCORRECT!'}
       </div>
 
       <div className="verdict-card verdict-card-warn">
-        <div className="strike-warning-banner" style={{ background: isSecondStrike ? 'rgba(255, 45, 120, 0.18)' : undefined, borderColor: isSecondStrike ? '#ff2d78' : undefined, color: isSecondStrike ? '#ff6b9d' : undefined }}>
-          <AlertTriangle size={18} color={isSecondStrike ? '#ff2d78' : '#f7b733'} />
-          <span>
-            {isSecondStrike
-              ? '⚠️ 2 STRIKES (FINAL WARNING: 1 MORE WRONG = ELIMINATED)'
-              : '1 STRIKE RECEIVED (2 Strikes Remaining)'}
-          </span>
-        </div>
+        {isLastRound ? (
+          <div className="strike-warning-banner" style={{ background: 'rgba(255, 210, 87, 0.15)', borderColor: '#ffd257', color: '#ffd257' }}>
+            <AlertTriangle size={18} color="#ffd257" />
+            <span>🏁 FINAL ROUND COMPLETED</span>
+          </div>
+        ) : (
+          <div className="strike-warning-banner" style={{ background: isSecondStrike ? 'rgba(255, 45, 120, 0.18)' : undefined, borderColor: isSecondStrike ? '#ff2d78' : undefined, color: isSecondStrike ? '#ff6b9d' : undefined }}>
+            <AlertTriangle size={18} color={isSecondStrike ? '#ff2d78' : '#f7b733'} />
+            <span>
+              {isSecondStrike
+                ? '⚠️ 2 STRIKES (FINAL WARNING: 1 MORE WRONG = ELIMINATED)'
+                : '1 STRIKE RECEIVED (2 Strikes Remaining)'}
+            </span>
+          </div>
+        )}
 
         <div className="verdict-card-row">
           <span className="v-label">Your Answer:</span>
@@ -202,8 +223,10 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
         <span>Current Score: <strong>{me?.score || 0} pts</strong></span>
       </div>
 
-      <p className="verdict-footer-note" style={{ color: isSecondStrike ? '#ff6b9d' : '#ffd257' }}>
-        {isSecondStrike
+      <p className="verdict-footer-note" style={{ color: isLastRound ? '#ffd257' : isSecondStrike ? '#ff6b9d' : '#ffd257' }}>
+        {isLastRound
+          ? '🏁 That was the final round! Watch the big screen for the Champion Podium and your Final Scorecard!'
+          : isSecondStrike
           ? '🚨 DANGER: You are on 2 Strikes! Answer correctly on the next round to stay in the game!'
           : '⚠️ You survived this round on 1 Strike. Answer correctly on the next round to clear strikes!'}
       </p>

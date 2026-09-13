@@ -50,23 +50,21 @@ body {
   transition: background .15s;
 }
 .app.bg-wrong-blink .bg-layer {
-  background: radial-gradient(circle at 50% 34%, rgba(255, 35, 75, 0.95), #24050b 82%) !important;
-  animation: red-danger-strobe 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate !important;
-  transition: background 0.15s;
+  background: radial-gradient(circle at 50% 34%, rgba(255, 95, 120, 0.35), #16080b 85%) !important;
+  animation: soft-light-red-glow 2.5s ease-in-out infinite alternate !important;
+  transition: background 0.3s ease;
 }
 @keyframes breathe { 0%,100%{filter:brightness(.92)} 50%{filter:brightness(1.28)} }
 @keyframes red-alarm-pulse {
   0%, 100% { filter: brightness(1) saturate(1.15); }
   50% { filter: brightness(1.25) saturate(1.35); }
 }
-@keyframes red-danger-strobe {
+@keyframes soft-light-red-glow {
   0% {
-    filter: brightness(0.9) saturate(1.2);
-    box-shadow: inset 0 0 40px rgba(255, 45, 120, 0.3);
+    filter: brightness(0.95);
   }
   100% {
-    filter: brightness(1.4) saturate(1.8);
-    box-shadow: inset 0 0 120px rgba(255, 0, 60, 0.8);
+    filter: brightness(1.18);
   }
 }
 @keyframes full-screen-alert-blink {
@@ -92,14 +90,8 @@ body {
 .app.bg-red   .tint-layer { opacity: 1; background: radial-gradient(circle, rgba(255, 85, 115, 0.42), rgba(255, 50, 85, 0.55)) !important; transition: opacity .1s; }
 .app.bg-wrong-blink .tint-layer {
   opacity: 1 !important;
-  background: radial-gradient(circle, rgba(255, 30, 80, 0.55), rgba(255, 0, 60, 0.75)) !important;
-  animation: red-tint-flash 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate !important;
-  transition: opacity 0.1s;
-}
-
-@keyframes red-tint-flash {
-  0% { opacity: 0.35; }
-  100% { opacity: 0.95; }
+  background: radial-gradient(circle at 50% 35%, rgba(255, 110, 130, 0.15), rgba(255, 60, 80, 0.06)) !important;
+  transition: opacity 0.3s ease;
 }
 
 @keyframes full-screen-alert-tint {
@@ -2428,6 +2420,24 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 .rev-icon { font-size: 22px; flex-shrink: 0; }
 .revival-notice-box strong { color: #ffd257; font-size: 13px; display: block; margin-bottom: 2px; }
 .revival-notice-box p { margin: 0; font-size: 12px; color: #eaeaea; line-height: 1.4; }
+
+.why-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #f1f5f9;
+  text-align: left;
+}
+.why-box strong {
+  color: #ffd257;
+  display: block;
+  margin-bottom: 3px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
 
 /* ── Player join ───────────────────────────────────────────────────── */
 .player-join { padding: 24px 18px 48px; }

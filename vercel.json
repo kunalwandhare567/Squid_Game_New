@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd squid-game-react && npm run build",
+  "outputDirectory": "squid-game-react/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

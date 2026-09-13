@@ -64,7 +64,7 @@ export function GameProvider({ roomCode, children }) {
             roomCode: roomData.room_code,
           };
           dispatch({ type: 'SET_META', payload: metaObj });
-          dispatch({ type: 'SET_QUESTION', payload: roomData.question || null });
+          dispatch({ type: 'SET_QUESTION', payload: roomData.question || roomData.meta?.question || null });
         }
 
         const { data: playersList } = await supabase
@@ -121,7 +121,7 @@ export function GameProvider({ roomCode, children }) {
             roomCode: row.room_code,
           };
           dispatch({ type: 'SET_META', payload: metaObj });
-          dispatch({ type: 'SET_QUESTION', payload: row.question || null });
+          dispatch({ type: 'SET_QUESTION', payload: row.question || row.meta?.question || null });
         }
       )
       .on(

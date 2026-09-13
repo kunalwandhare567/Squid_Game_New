@@ -43,11 +43,22 @@ export default function PlayerAnswer({
     if (!next) audio.sfxTap();
   };
 
-  // Reset powerups on new question
+  // Direct question sync fallback if state.question is delayed
   useEffect(() => {
-    setShieldOn(false);
-    setDdOn(false);
-  }, [roundKey]);
+    if (!question && roomCode) {
+      supabase
+        .from('rooms')
+        .select('question')
+        .eq('room_code', roomCode)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.question) {
+            window.dispatchEvent(new CustomEvent('sq_question_sync', { detail: data.question }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [question, roomCode]);
 
   // Sync live answers count for the progress bar
   useEffect(() => {
@@ -88,8 +99,7 @@ export default function PlayerAnswer({
     };
   }, [roomCode, roundKey]);
 
-  // Per-player option shuffling on mobile:
-  // Shuffles options specifically for this player device so peeking/cheating is impossible!
+  // Per-player option shuffling on mobile
   const shuffledOptions = useMemo(() => {
     if (!question?.options) return [];
     const entries = Object.entries(question.options);
@@ -135,9 +145,28 @@ export default function PlayerAnswer({
 
   if (!question) {
     return (
-      <div className="player-loading-wrap">
-        <div className="player-loading-spinner" />
-        <p className="player-loading-text">Loading question…</p>
+      <div className="player-arena is-green center" style={{ justifyContent: 'center', minHeight: '100vh', gap: '16px' }}>
+        <div className="player-ambient-bg" aria-hidden="true">
+          <span className="ambient-sym sym-circle">○</span>
+          <span className="ambient-sym sym-triangle">△</span>
+          <span className="ambient-sym sym-square">□</span>
+        </div>
+        <div
+          style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid rgba(87, 255, 176, 0.2)',
+            borderTopColor: '#57ffb0',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }}
+        />
+        <h2 style={{ color: '#57ffb0', fontSize: '20px', fontWeight: 800, margin: 0 }}>
+          GET READY FOR ROUND {roundNum}!
+        </h2>
+        <p style={{ color: '#a9cabf', fontSize: '14px', margin: 0 }}>
+          Syncing question from Host…
+        </p>
       </div>
     );
   }

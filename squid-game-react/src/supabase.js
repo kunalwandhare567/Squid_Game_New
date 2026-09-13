@@ -22,7 +22,10 @@ if (!supabaseUrl) {
   supabaseUrl = 'https://gpcpakrnuinkffhsueux.supabase.co';
 }
 
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '').trim().replace(/^["']|["']$/g, '');
+const defaultAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwY3Bha3JudWlua2ZmaHN1ZXV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMDczNjYsImV4cCI6MjEwNDc4MzM2Nn0.zyZ2dGdJzSaTdi0Kcf9_c5Zz5L317vn2w0Pm6KgA0A4';
+
+const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || defaultAnonKey;
+const supabaseAnonKey = rawKey.trim().replace(/^["']|["']$/g, '');
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
@@ -31,3 +34,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
   },
 });
+

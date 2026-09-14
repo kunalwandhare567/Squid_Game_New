@@ -23,7 +23,7 @@ const RULES = [
   { num: '03', icon: Brain,       title: 'THINK SMART',    desc: 'Questions test AI, engineering, and logic intuition',     color: '#3aa0ff' },
   { num: '04', icon: Award,       title: 'EARN POINTS',    desc: 'Every correct answer builds your score toward champion',  color: '#ffd257' },
   { num: '05', icon: ShieldCheck, title: 'USE POWERS',     desc: 'Activate 🛡 Shield protection & ✕2 Double Down score',    color: '#a78bfa' },
-  { num: '06', icon: Skull,       title: '2 STRIKES CUT',  desc: '2 consecutive wrong = out. Round 2 Revival gives 1 shot', color: '#f43f5e' },
+  { num: '06', icon: Skull,       title: '3 STRIKES CUT',  desc: '3 consecutive wrong = out. Round 3 Revival gives 1 shot', color: '#f43f5e' },
 ];
 
 export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemoveBot, botCount }) {

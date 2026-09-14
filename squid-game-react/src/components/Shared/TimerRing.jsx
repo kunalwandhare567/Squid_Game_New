@@ -2,14 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const CIRCUMFERENCE = 2 * Math.PI * 44; // r=44
 
-export default function TimerRing({ totalSeconds = 10, resetKey }) {
+export default function TimerRing({ totalSeconds = 10, resetKey, startTimeMs }) {
   const [secsLeft, setSecsLeft] = useState(totalSeconds);
-  const startRef = useRef(Date.now());
+  const startRef = useRef(startTimeMs || Date.now());
   const rafRef   = useRef(null);
 
   useEffect(() => {
-    startRef.current = Date.now();
-    setSecsLeft(totalSeconds);
+    startRef.current = startTimeMs || Date.now();
 
     const tick = () => {
       const elapsed   = (Date.now() - startRef.current) / 1000;
@@ -23,7 +22,7 @@ export default function TimerRing({ totalSeconds = 10, resetKey }) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [totalSeconds, resetKey]);
+  }, [totalSeconds, resetKey, startTimeMs]);
 
   const fraction = secsLeft / totalSeconds;
   const offset   = CIRCUMFERENCE * (1 - fraction);

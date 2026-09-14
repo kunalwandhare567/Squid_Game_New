@@ -21,12 +21,25 @@ export default function PlayerAnswer({
   aliveCount = 0,
   totalCount = 0,
   isRevival = false,
+  startTimeMs = null,
   myChoiceId,
   setMyChoiceId
 }) {
   const [liveAnswersCount, setLiveAnswersCount] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const audio = useAudio();
+
+  // Auto-restore player's previous choice if they refreshed during this question
+  useEffect(() => {
+    if (!myChoiceId && roomCode && roundKey) {
+      try {
+        const saved = sessionStorage.getItem(`sq_ans_${roomCode}_${roundKey}`) || sessionStorage.getItem('sq_last_choice');
+        if (saved) {
+          setMyChoiceId(saved);
+        }
+      } catch (e) {}
+    }
+  }, [roomCode, roundKey, myChoiceId, setMyChoiceId]);
 
   // Audio mute sync
   useEffect(() => {
@@ -266,6 +279,7 @@ export default function PlayerAnswer({
                 key={question?.id || roundKey}
                 totalSeconds={GREEN_DURATION_SECS}
                 resetKey={question?.id || roundKey}
+                startTimeMs={startTimeMs}
               />
             </div>
           ) : (

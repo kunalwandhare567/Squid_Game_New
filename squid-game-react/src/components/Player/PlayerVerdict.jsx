@@ -95,7 +95,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
         <ConfettiCanvas active />
         <div className="cele-badge">✓</div>
         <div className="verdict verdict-safe">
-          {isLastRound ? 'CORRECT! ROUND 7 COMPLETE 🎉' : 'CORRECT & SAFE! 🎉'}
+          {isLastRound ? `CORRECT! ROUND ${roundNum} COMPLETE 🎉` : 'CORRECT & SAFE! 🎉'}
         </div>
 
         <div className="verdict-card verdict-card-safe">
@@ -183,7 +183,7 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
     <div className="verdict-screen center verdict-wrong-screen">
       <DollSvg phase="red" />
       <div className="verdict verdict-out" style={{ color: '#ff2d78' }}>
-        {isLastRound ? 'INCORRECT (ROUND 7)' : 'INCORRECT!'}
+        {isLastRound ? `INCORRECT (ROUND ${roundNum})` : 'INCORRECT!'}
       </div>
 
       <div className="verdict-card verdict-card-warn">

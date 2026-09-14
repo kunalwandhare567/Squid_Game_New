@@ -235,13 +235,61 @@ export function determineWinner(players) {
   return ranked[0] || null;
 }
 
+const RECENT_HISTORY_LIMIT = 120; // Tracks history across ~10 consecutive rooms
+let inMemoryRecentIds = [];
+
+export function getRecentlyUsedQuestionIds() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem('squid_recent_q_ids');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    }
+  } catch (e) {}
+  return inMemoryRecentIds;
+}
+
+export function saveRecentlyUsedQuestionIds(ids) {
+  const trimmed = ids.slice(-RECENT_HISTORY_LIMIT);
+  inMemoryRecentIds = trimmed;
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('squid_recent_q_ids', JSON.stringify(trimmed));
+    }
+  } catch (e) {}
+}
+
 /**
  * buildGameSet
- * Draw ROUNDS+1 unique questions randomly from the bank and shuffle option display order.
+ * Draw ROUNDS+1 unique questions randomly from the 400 bank.
+ * Excludes questions used in the last 8-10 rooms so audiences never see repeats.
  */
 export function buildGameSet(bank, rounds = ROUNDS) {
-  const shuffled = fisherYates([...bank]);
-  return shuffled.slice(0, rounds + 1).map(buildQuestion);
+  const needed = rounds + 1;
+  const recentIds = getRecentlyUsedQuestionIds();
+
+  // Filter out questions used in the recent 8-10 rooms
+  let available = bank.filter(q => !recentIds.includes(q.id));
+
+  // If pool runs low after cycling many rooms, prune oldest history
+  if (available.length < needed) {
+    const trimmedRecent = recentIds.slice(Math.floor(recentIds.length / 2));
+    available = bank.filter(q => !trimmedRecent.includes(q.id));
+    if (available.length < needed) {
+      available = [...bank];
+    }
+  }
+
+  const shuffled = fisherYates([...available]);
+  const selected = shuffled.slice(0, needed);
+
+  // Update history to avoid duplicates in upcoming rooms
+  const newRecent = [...recentIds, ...selected.map(q => q.id)];
+  saveRecentlyUsedQuestionIds(newRecent);
+
+  return selected.map(buildQuestion);
 }
 
 /**

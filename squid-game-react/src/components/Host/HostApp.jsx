@@ -47,7 +47,7 @@ export default function HostApp() {
 }
 
 function HostController({ roomCode }) {
-  const { state } = useGame();
+  const { state, dispatch } = useGame();
   const audio = useAudio();
 
   // ── Host-only state ───────────────────────────────────────────────────
@@ -233,6 +233,7 @@ function HostController({ roomCode }) {
         maxPlayers: MAX_PLAYERS,
         minPlayers: MIN_PLAYERS,
         phase: revival ? 'revival' : 'question',
+        startedAt: nowMs,
       },
       started_at: nowIso,
       updated_at: nowIso,
@@ -324,7 +325,7 @@ function HostController({ roomCode }) {
     }
   }, [lockGuard, isRevival, roundIndex, gameQuestions, roomCode, greenStartAt]);
 
-  // ── Batch player updates for 400-500 player scaling ───────────────────
+  // ── Batch player updates with retry for bulletproof live event stability ───
   async function batchUpdatePlayerStates(playerList) {
     const CHUNK_SIZE = 50;
     for (let i = 0; i < playerList.length; i += CHUNK_SIZE) {
@@ -335,19 +336,32 @@ function HostController({ roomCode }) {
         emoji: ps.emoji,
         alive: ps.alive,
         spectator: !!ps.spectator,
-        score: ps.score,
-        consecutive_wrong: ps.consecutiveWrong ?? ps.consecutive_wrong ?? 0,
-        correct_count: ps.correctCount ?? ps.correct_count ?? 0,
-        rounds_played: ps.roundsPlayed ?? ps.rounds_played ?? 0,
+        score: Number(ps.score) || 0,
+        strikes: Number(ps.strikes ?? ps.consecutiveWrong ?? ps.consecutive_wrong ?? 0),
+        consecutive_wrong: Number(ps.consecutiveWrong ?? ps.consecutive_wrong ?? 0),
         shield: ps.shield ?? 1,
         dd: ps.dd ?? 1,
         join_order: ps.joinOrder ?? ps.join_order ?? 99,
         bot: !!ps.bot,
       }));
-      try {
-        await supabase.from('players').upsert(chunk);
-      } catch (err) {
-        console.error('Batch update players error:', err);
+
+      // Retry up to 3 times to ensure 100% database persistence even on busy event Wi-Fi
+      let attempts = 0;
+      let success = false;
+      while (attempts < 3 && !success) {
+        attempts++;
+        try {
+          const { error } = await supabase.from('players').upsert(chunk);
+          if (!error) {
+            success = true;
+          } else {
+            console.warn(`Supabase player update attempt ${attempts} failed:`, error.message);
+            if (attempts < 3) await new Promise(r => setTimeout(r, 200 * attempts));
+          }
+        } catch (err) {
+          console.warn(`Supabase network error attempt ${attempts}:`, err);
+          if (attempts < 3) await new Promise(r => setTimeout(r, 200 * attempts));
+        }
       }
     }
   }
@@ -357,6 +371,12 @@ function HostController({ roomCode }) {
     const alivePlayers = getPlayers('alive');
     const { results, eliminations, survivors, newPlayerStates } =
       resolveRound(alivePlayers, answers, q, greenStartAt);
+
+    // Immediately update local GameContext players state so Host UI is 100% real-time
+    const mergedPlayers = { ...(state.players || {}), ...newPlayerStates };
+    if (dispatch) {
+      dispatch({ type: 'SET_PLAYERS', payload: mergedPlayers });
+    }
 
     // Apply updated player states to Supabase in batches (supports 500+ players)
     await batchUpdatePlayerStates(Object.values(newPlayerStates));
@@ -410,6 +430,11 @@ function HostController({ roomCode }) {
           consecutiveWrong: 0,
           consecutive_wrong: 0,
         }));
+      if (dispatch) {
+        const updated = { ...(state.players || {}) };
+        revivedList.forEach(p => { updated[p.id] = p; });
+        dispatch({ type: 'SET_PLAYERS', payload: updated });
+      }
       await batchUpdatePlayerStates(revivedList);
     }
 

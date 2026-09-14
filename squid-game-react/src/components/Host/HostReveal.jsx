@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Award, Shield, Zap, Skull, CheckCircle2,
   ArrowRight, Flame, AlertTriangle, Sparkles, Brain, Radio,
@@ -44,14 +44,27 @@ export default function HostReveal({
   onExit
 }) {
   const [showAllModal, setShowAllModal] = useState(false);
+  const [animated, setAnimated] = useState(false);
 
-  // Canonical ranked list of all active/eliminated players
+  // Trigger smooth step-by-step runner run animation from previous round position
+  useEffect(() => {
+    setAnimated(false);
+    const timer = setTimeout(() => {
+      setAnimated(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [roundNum]);
+
+  // Canonical ranked list of all active/eliminated players (strictly sorted by latest score)
   const rankedList = useMemo(() => {
-    if (players && Object.keys(players).length > 0) {
-      return rankPlayers(players);
-    }
-    const combined = [...survivors, ...eliminations];
-    return combined.sort((a, b) => (b.score || 0) - (a.score || 0));
+    const merged = { ...(players || {}) };
+    (survivors || []).forEach(p => {
+      merged[p.id] = { ...merged[p.id], ...p };
+    });
+    (eliminations || []).forEach(p => {
+      merged[p.id] = { ...merged[p.id], ...p };
+    });
+    return rankPlayers(merged);
   }, [players, survivors, eliminations]);
 
   // Derived Survivors and Eliminated lists sorted by rank/score
@@ -63,6 +76,7 @@ export default function HostReveal({
     return rankedList.filter(p => !p.alive || (p.consecutiveWrong ?? p.consecutive_wrong ?? 0) >= 3);
   }, [rankedList]);
 
+  // Dynamic Top 5: Always takes the current top 5 players based on updated score
   const top5Players = useMemo(() => {
     if (safeSurvivors.length >= 5) return safeSurvivors.slice(0, 5);
     return rankedList.slice(0, 5);
@@ -84,11 +98,15 @@ export default function HostReveal({
   const correctLetter = correctIndex >= 0 ? LETTERS[correctIndex] : 'A';
   const correctText = question?.correctAnswer || (question?.options && question.options[correctId]) || 'Correct Answer';
 
-  // Compute max score for track normalization
-  const maxScore = useMemo(() => {
-    const highest = Math.max(...rankedList.map(p => Number(p.score || 0)), 0);
-    return highest > 0 ? highest * 1.15 : 40;
-  }, [rankedList]);
+  // 10 sections max track score: 10 rounds * 2 pts = 20 pts max
+  const maxTrackScore = useMemo(() => Math.max(20, totalRounds * 2), [totalRounds]);
+
+  // Map 0 to 20 pts cleanly into 10 visual sections (4% start -> 90% finish line)
+  const calcProgress = useCallback((score) => {
+    const s = Math.max(0, Number(score) || 0);
+    const ratio = Math.min(1, s / maxTrackScore);
+    return 4 + ratio * 86;
+  }, [maxTrackScore]);
 
   return (
     <div className="host-reveal-arena">
@@ -277,7 +295,7 @@ export default function HostReveal({
                   safeSurvivors.map((p, idx) => {
                     const rankNum = idx + 1;
                     const res = results?.[p.id];
-                    const ptsDelta = res?.points ?? (res?.correct ? 10 : 0);
+                    const ptsDelta = res?.points ?? (res?.correct ? 2 : 0);
                     const strikes = p.consecutiveWrong ?? p.consecutive_wrong ?? 0;
                     const isTop1 = rankNum === 1;
                     const isTop2 = rankNum === 2;
@@ -396,8 +414,17 @@ export default function HostReveal({
                   const rankNum = idx + 1;
                   const rankSuffix = rankNum === 1 ? 'st' : rankNum === 2 ? 'nd' : rankNum === 3 ? 'rd' : 'th';
                   const color = LANE_COLORS[idx % LANE_COLORS.length];
-                  const pScore = Number(p.score || 0);
-                  const progressPct = Math.min(88, Math.max(5, (pScore / maxScore) * 80 + 8));
+
+                  // Calculate current score vs previous round score
+                  const res = results?.[p.id];
+                  const ptsDelta = res?.points ?? (res?.correct ? 2 : 0);
+                  const currentScore = Number(p.score || 0);
+                  const prevScore = Math.max(0, currentScore - ptsDelta);
+
+                  const prevProgress = calcProgress(prevScore);
+                  const currentProgress = calcProgress(currentScore);
+                  const activeProgress = animated ? currentProgress : prevProgress;
+                  const displayScore = animated ? currentScore : prevScore;
 
                   return (
                     <div key={p.id} className="race-lane-item" style={{ '--lane-theme': color }}>
@@ -410,10 +437,25 @@ export default function HostReveal({
                       {/* Race Track Line & Moving Runner with Floating Name and Score */}
                       <div className="lane-track-strip">
                         <div className="track-base-line" />
-                        <div className="track-fill-line" style={{ width: `${progressPct}%`, backgroundColor: color }} />
 
-                        {/* Animated Runner positioned along the lane with Floating Name on TOP */}
-                        <div className="runner-vehicle" style={{ left: `${progressPct}%` }}>
+                        {/* 10 Step Distance Markers (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 pts) */}
+                        <div className="track-step-markers" aria-hidden="true">
+                          {Array.from({ length: 10 }, (_, s) => {
+                            const stepScore = (s + 1) * 2;
+                            const stepPct = calcProgress(stepScore);
+                            return (
+                              <div key={s} className="track-step-notch" style={{ left: `${stepPct}%` }}>
+                                <span className="notch-tick" />
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Fill line advancing smoothly */}
+                        <div className="track-fill-line" style={{ width: `${activeProgress}%`, backgroundColor: color }} />
+
+                        {/* Animated Runner running from previous score to updated score position */}
+                        <div className="runner-vehicle" style={{ left: `${activeProgress}%` }}>
                           {/* 1. Movable Player Name Tag on TOP */}
                           <div className="runner-floating-name-tag" style={{ borderColor: color, boxShadow: `0 0 10px ${color}35` }}>
                             <span className="runner-tag-avatar">{p.emoji || '👤'}</span>
@@ -425,8 +467,15 @@ export default function HostReveal({
 
                           {/* 3. Movable Score Tag on BOTTOM */}
                           <div className="runner-score-badge" style={{ borderColor: color, color }}>
-                            {pScore} pts
+                            {displayScore} pts
                           </div>
+
+                          {/* 4. Animated Delta Chip (+2 green / -2 red) */}
+                          {animated && ptsDelta !== 0 && (
+                            <span className={`runner-delta-badge ${ptsDelta > 0 ? 'delta-gain' : 'delta-loss'}`}>
+                              {ptsDelta > 0 ? `+${ptsDelta}` : ptsDelta}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

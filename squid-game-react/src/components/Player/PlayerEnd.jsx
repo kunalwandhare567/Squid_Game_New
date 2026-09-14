@@ -40,8 +40,13 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
         Math.max(0, Math.floor(finalScore / 2))
       );
 
-  // Sound cue on finale reveal
+  // Sound cue on finale reveal & record arena_completed_date
   useEffect(() => {
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      localStorage.setItem('arena_completed_date', todayStr);
+    } catch (e) {}
+
     if (isFirst) {
       audio?.sfxWin?.();
       audio?.say?.(`Congratulations! You are the champion of the IAE Squid Game with ${finalScore} points!`);

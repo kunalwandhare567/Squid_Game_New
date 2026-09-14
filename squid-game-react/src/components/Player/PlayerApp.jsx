@@ -27,18 +27,46 @@ function PlayerController({ roomCode }) {
   const { pid } = usePlayerSession();
   const audio   = useAudio();
 
-  const [joined,    setJoined]    = useState(false);
-  const [isSpec,    setIsSpec]    = useState(false);
-  const [myChoiceId,setMyChoiceId]= useState(null);
+  // Auto-detect if player was already joined in this room session
+  const [joined, setJoined] = useState(() => {
+    try {
+      return sessionStorage.getItem(`sq_joined_${roomCode}`) === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+  const [isSpec, setIsSpec] = useState(false);
+  const [myChoiceId, setMyChoiceId] = useState(null);
 
   const meta     = state?.meta || {};
   const phase    = state?.phase || state?.meta?.phase || meta?.phase || 'lobby';
   const question = state?.question || null;
   const me       = state?.players?.[pid] || null;
 
+  // Auto-sync joined state when player record arrives from Supabase
+  useEffect(() => {
+    if (me && !joined) {
+      setJoined(true);
+      setIsSpec(Boolean(me.spectator));
+      try {
+        sessionStorage.setItem(`sq_joined_${roomCode}`, 'true');
+      } catch (e) {}
+    }
+  }, [me, joined, roomCode]);
+
   const isEliminated = me ? (!me.alive && !me.spectator) : false;
 
   const [verdictStatus, setVerdictStatus] = useState('safe');
+
+  // Mark game as completed for today when game finishes
+  useEffect(() => {
+    if (phase === 'gameover') {
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        localStorage.setItem('arena_completed_date', todayStr);
+      } catch (e) {}
+    }
+  }, [phase]);
 
   // Reset answer selection ONLY when a new question round starts
   useEffect(() => {
@@ -116,6 +144,7 @@ function PlayerController({ roomCode }) {
           roundNum={roundNum} totalRounds={totalRounds}
           aliveCount={aliveCount} totalCount={totalCount}
           isRevival={true}
+          startTimeMs={meta?.startedAt}
           myChoiceId={myChoiceId} setMyChoiceId={setMyChoiceId}
         />
       );
@@ -146,6 +175,7 @@ function PlayerController({ roomCode }) {
         roundNum={roundNum} totalRounds={totalRounds}
         aliveCount={aliveCount} totalCount={totalCount}
         isRevival={false}
+        startTimeMs={meta?.startedAt}
         myChoiceId={myChoiceId} setMyChoiceId={setMyChoiceId}
       />
     );

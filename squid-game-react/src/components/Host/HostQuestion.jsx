@@ -61,6 +61,13 @@ export default function HostQuestion({
   const rkey = `r${roundNum - 1}`;
   const effectiveRoomCode = roomCode || state.meta?.roomCode || state.meta?.room_code;
 
+  // Reset counts cleanly when round changes
+  useEffect(() => {
+    setAnsCount(0);
+    armedRef.current = false;
+    lockedRef.current = false;
+  }, [rkey]);
+
   // Real-time Supabase answer count tracker with fast polling fallback
   useEffect(() => {
     if (!effectiveRoomCode) return;
@@ -76,7 +83,7 @@ export default function HostQuestion({
 
         if (data && isMounted) {
           const count = data.length;
-          setAnsCount(prev => Math.max(prev, count));
+          setAnsCount(count);
           const threshold = Math.ceil(aliveCount * ANSWER_FRAC);
           if (count >= threshold && !armedRef.current) arm();
         }

@@ -72,6 +72,11 @@ export default function PlayerAnswer({
     }
   }, [question, roomCode]);
 
+  // Reset live answers count on new round
+  useEffect(() => {
+    setLiveAnswersCount(0);
+  }, [roundKey]);
+
   // Sync live answers count for the progress bar
   useEffect(() => {
     if (!roomCode || !roundKey) return;
@@ -93,7 +98,7 @@ export default function PlayerAnswer({
     }
 
     syncAnswers();
-    const interval = setInterval(syncAnswers, 1000);
+    const interval = setInterval(syncAnswers, 400);
 
     const channel = supabase
       .channel(`player-answers-${roomCode}-${roundKey}`)

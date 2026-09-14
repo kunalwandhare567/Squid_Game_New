@@ -4824,6 +4824,35 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
   opacity: 0.75;
 }
 
+@media (max-width: 1200px) {
+  .hq-arena-footer {
+    grid-template-columns: 280px 1fr 200px;
+    gap: 12px;
+    padding: 10px 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hq-arena-footer {
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+  }
+  .hq-quote-box {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .hq-arena-footer {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .btn-host-lock-light {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ==========================================================================
    HOST REVEAL ARENA — SQUID-INSPIRED REAL-TIME DASHBOARD (LAPTOP-FIRST)
    ========================================================================== */
@@ -6744,16 +6773,23 @@ div[class*="netlify"],
 
 .passkey-input-row {
   display: flex;
+  align-items: center;
   gap: 8px;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .passkey-mini-input {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: rgba(6, 18, 15, 0.95);
   border: 1.2px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   color: #ffffff;
   font-size: 14px;
   font-weight: 700;
@@ -6768,10 +6804,12 @@ div[class*="netlify"],
 }
 
 .passkey-unlock-btn {
+  flex-shrink: 0;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #ffd257 0%, #f59e0b 100%);
   border: none;
   border-radius: 8px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   color: #06120f;
   font-weight: 900;
   font-size: 12px;
@@ -6810,6 +6848,40 @@ div[class*="netlify"],
 
 .passkey-cancel-btn:hover {
   color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .repeat-player-screen {
+    padding: 16px 12px 32px;
+  }
+  .repeat-warning-card {
+    max-width: calc(100vw - 24px);
+    padding: 24px 16px 20px;
+    border-radius: 16px;
+  }
+  .repeat-title {
+    font-size: 17px;
+  }
+  .repeat-desc {
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+  .repeat-info-box {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    gap: 6px;
+  }
+  .repeat-passkey-form {
+    padding: 10px 10px;
+  }
+  .passkey-mini-input {
+    font-size: 13px;
+    padding: 7px 8px;
+  }
+  .passkey-unlock-btn {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
 }
 
 /* =====================================================================

@@ -94,6 +94,8 @@ function HostController({ roomCode }) {
   useEffect(() => {
     if (phase !== 'question') return;
     const rkey = `r${roundIndex}`;
+    answersRef.current = {};
+    dispatch({ type: 'SET_ANSWERS', payload: {} });
 
     async function fetchInitialAnswers() {
       try {
@@ -201,6 +203,7 @@ function HostController({ roomCode }) {
 
     setPhase('question');
     answersRef.current = {};
+    dispatch({ type: 'SET_ANSWERS', payload: {} });
 
     const nowIso = new Date().toISOString();
     const nowMs = Date.now();
@@ -500,6 +503,7 @@ function HostController({ roomCode }) {
 
         {phase === 'question' && gameQuestions.length > 0 && (
           <HostQuestion
+            key={`host-q-${roundIndex}-${gameQuestions[roundIndex]?.id || roundIndex}`}
             question={gameQuestions[roundIndex]}
             roundNum={roundIndex + 1}
             totalRounds={ROUNDS}

@@ -176,7 +176,7 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
           <h1 className="repeat-title">ALREADY PLAYED TODAY</h1>
 
           <p className="repeat-desc">
-            You have already participated in today’s IAE Squid Game match. To ensure fair competition for all contestants, players can only play <strong>1 match per day</strong>.
+            You have already participated in today’s IAE Squid Survival match. To ensure fair competition for all contestants, players can only play <strong>1 match per day</strong>.
           </p>
 
           <div className="repeat-info-box">

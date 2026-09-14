@@ -27,7 +27,7 @@ export default function HostPodium({ players, onRestart }) {
       announcedRef.current = true;
       const t = setTimeout(() => {
         audio.sfxWin();
-        audio.say(`${winner.name} wins the Squid Game with ${winner.score || 0} points!`);
+        audio.say(`${winner.name} wins IAE Squid Survival with ${winner.score || 0} points!`);
       }, 600);
       return () => clearTimeout(t);
     }
@@ -35,7 +35,7 @@ export default function HostPodium({ players, onRestart }) {
 
   const handleShare = () => {
     try {
-      const shareText = `🏆 I survived the IAE Squid Game Arena! Winner: ${winner.name} with ${winner.score} pts!`;
+      const shareText = `🏆 I survived the IAE Squid Survival Arena! Winner: ${winner.name} with ${winner.score} pts!`;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(shareText);
         setCopied(true);
@@ -67,7 +67,7 @@ export default function HostPodium({ players, onRestart }) {
             <span className="geo-icon green">□</span>
           </div>
           <div className="finale-brand-text">
-            <span className="brand-title">IAE SQUID GAME</span>
+            <span className="brand-title">IAE SQUID SURVIVAL</span>
             <span className="brand-sub">TCS TECHNOLOGY EXPO · SURVIVOR FINALE</span>
           </div>
         </div>
@@ -328,7 +328,7 @@ export default function HostPodium({ players, onRestart }) {
           </div>
           <div className="share-text-wrap">
             <div className="share-title">SHARE YOUR SURVIVAL SCORE</div>
-            <p className="share-quote">"I SURVIVED THE IAE SQUID GAME"</p>
+            <p className="share-quote">"I SURVIVED THE IAE SQUID SURVIVAL"</p>
           </div>
           <button className="share-btn" onClick={handleShare}>
             {copied ? '✓ COPIED RESULT!' : 'COPY RESULT'}

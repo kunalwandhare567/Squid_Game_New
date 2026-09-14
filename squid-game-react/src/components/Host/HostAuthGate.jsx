@@ -57,7 +57,7 @@ export default function HostAuthGate({ onAuthorized, onCancel }) {
             <span className="geo-icon blue">△</span>
             <span className="geo-icon green">□</span>
           </div>
-          <div className="brand" style={{ fontSize: '13px', letterSpacing: '3px' }}>IAE SQUID GAME</div>
+          <div className="brand" style={{ fontSize: '13px', letterSpacing: '3px' }}>IAE SQUID SURVIVAL</div>
           <div className="brand-sub-title" style={{ fontSize: '10px', color: 'var(--c-sub)', marginTop: '2px' }}>
             HOST CONSOLE • SECURITY ACCESS
           </div>

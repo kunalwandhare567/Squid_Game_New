@@ -201,7 +201,7 @@ export default function PlayerAnswer({
         <header className="player-hud-header">
           <div className="player-brand">
             <span className="brand-dot" />
-            <span className="brand-title">IAE SQUID GAME</span>
+            <span className="brand-title">IAE SQUID SURVIVAL</span>
           </div>
 
           <div className="player-header-actions">

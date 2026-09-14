@@ -10,26 +10,56 @@ import PlayerApp from './components/Player/PlayerApp';
  *   (none)       → Landing page
  */
 export default function App() {
-  const [mode,     setMode]     = useState(null);
+  const [mode, setMode] = useState(null);
   const [roomCode, setRoomCode] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const room   = params.get('room');
-    const host   = params.get('host');
-    if (room)       { setRoomCode(room.toUpperCase()); setMode('player'); }
-    else if (host)  { setMode('host'); }
-    else            { setMode('landing'); }
+    const room = params.get('room');
+    const host = params.get('host');
+    if (room) { setRoomCode(room.toUpperCase()); setMode('player'); }
+    else if (host) { setMode('host'); }
+    else { setMode('landing'); }
   }, []);
 
   if (!mode) return <div className="loading">Loading…</div>;
 
   return (
     <AudioProvider>
-      {mode === 'host'    && <HostApp />}
-      {mode === 'player'  && <PlayerApp roomCode={roomCode} />}
+      <GlobalAmbientGeoShapes />
+      {mode === 'host' && <HostApp />}
+      {mode === 'player' && <PlayerApp roomCode={roomCode} />}
       {mode === 'landing' && <LandingPage />}
     </AudioProvider>
+  );
+}
+
+function GlobalAmbientGeoShapes() {
+  return (
+    <div className="global-ambient-geo-layer" aria-hidden="true">
+      {/* Circle Shapes (Pink Glow) */}
+      <span className="ambient-geo-item geo-circle geo-size-lg geo-color-pink geo-pos-1">○</span>
+      <span className="ambient-geo-item geo-circle geo-size-md geo-color-pink geo-pos-2">○</span>
+      <span className="ambient-geo-item geo-circle geo-size-sm geo-color-pink geo-pos-3">○</span>
+      <span className="ambient-geo-item geo-circle geo-size-xl geo-color-pink geo-pos-4">○</span>
+
+      {/* Triangle Shapes (Cyan/Blue Glow) */}
+      <span className="ambient-geo-item geo-triangle geo-size-lg geo-color-cyan geo-pos-5">△</span>
+      <span className="ambient-geo-item geo-triangle geo-size-md geo-color-cyan geo-pos-6">△</span>
+      <span className="ambient-geo-item geo-triangle geo-size-sm geo-color-cyan geo-pos-7">△</span>
+      <span className="ambient-geo-item geo-triangle geo-size-xl geo-color-cyan geo-pos-8">△</span>
+
+      {/* Square Shapes (Mint Green Glow) */}
+      <span className="ambient-geo-item geo-square geo-size-lg geo-color-green geo-pos-9">□</span>
+      <span className="ambient-geo-item geo-square geo-size-md geo-color-green geo-pos-10">□</span>
+      <span className="ambient-geo-item geo-square geo-size-sm geo-color-green geo-pos-11">□</span>
+      <span className="ambient-geo-item geo-square geo-size-xl geo-color-green geo-pos-12">□</span>
+
+      {/* Micro Floating Badges */}
+      <span className="ambient-geo-item geo-circle geo-size-xs geo-color-cyan geo-pos-13">○</span>
+      <span className="ambient-geo-item geo-triangle geo-size-xs geo-color-green geo-pos-14">△</span>
+      <span className="ambient-geo-item geo-square geo-size-xs geo-color-pink geo-pos-15">□</span>
+    </div>
   );
 }
 
@@ -45,45 +75,90 @@ function LandingPage() {
   };
 
   return (
-    <div className="landing center">
-      <div className="brand" style={{ fontSize: '14px', letterSpacing: '4px', marginBottom: '12px' }}>IAE SQUID GAME</div>
-      <div style={{ fontSize: '72px', marginBottom: '12px' }}>🦑</div>
-      <h1>Red Light, Green Light</h1>
-      <p className="sub" style={{ margin: '0 auto 24px' }}>
-        AI Quiz · Live multiplayer · TCS Engineer Expo
-      </p>
-
-      {/* Direct Player Join Form */}
-      <div style={{ background: 'rgba(255,255,255,0.06)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(87,255,176,0.2)', width: '100%', maxWidth: '340px', marginBottom: '24px' }}>
-        <div style={{ fontSize: '14px', fontWeight: '700', color: '#57ffb0', marginBottom: '12px', letterSpacing: '1px' }}>📱 PLAYER JOIN</div>
-        <form onSubmit={handleJoin} style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-          <input
-            className="name-input"
-            placeholder="Enter 4-Letter Room Code"
-            maxLength={4}
-            value={code}
-            onChange={e => setCode(e.target.value.toUpperCase())}
-            style={{ textTransform: 'uppercase', textAlign: 'center', letterSpacing: '4px', fontSize: '20px', fontWeight: '800' }}
-          />
-          <button
-            type="submit"
-            className="cta"
-            disabled={code.trim().length !== 4}
-            style={{ width: '100%', marginTop: '8px' }}
-          >
-            ⚡ Join Game
-          </button>
-        </form>
+    <div className="landing-screen-container">
+      {/* Background Video Backdrop */}
+      <div className="landing-video-backdrop">
+        <video
+          className="landing-bg-video"
+          src="/lobby_animation.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+        <div className="landing-video-overlay" />
+        <div className="landing-scanline-fx" />
       </div>
 
-      <div style={{ opacity: 0.7, fontSize: '13px', marginBottom: '16px' }}>— OR —</div>
+      {/* Ambient Geometric Floating Shapes */}
+      <div className="landing-geo-ambient" aria-hidden="true">
+        <span className="geo-float-shape geo-1">○</span>
+        <span className="geo-float-shape geo-2">△</span>
+        <span className="geo-float-shape geo-3">□</span>
+        <span className="geo-float-shape geo-4">○</span>
+        <span className="geo-float-shape geo-5">△</span>
+      </div>
 
-      <a href="?host=true" className="cta-secondary" style={{ textDecoration: 'none', display: 'inline-block', marginBottom: '16px', padding: '12px 24px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: '700' }}>
-        📺 Open Host Screen (For Projector / Big Screen)
-      </a>
+      {/* Foreground Interactive Card */}
+      <div className="landing-content-card">
+        <div className="landing-brand-badge">
+          <span className="brand-dot" />
+          <span className="brand-text">IAE SQUID SURVIVAL</span>
+        </div>
 
-      <div className="ghost-note">
-        Tip: Players can also directly scan the QR code displayed on the host screen.
+        <div className="landing-emblem-wrap">
+          <img
+            src="/squid_survival_logo.png"
+            alt="IAE Squid Survival Emblem"
+            className="landing-emblem-img"
+          />
+        </div>
+
+        <h1 className="landing-title">
+          Red Light, Green Light
+        </h1>
+
+        <p className="landing-subtitle">
+          AI Quiz · Live Multiplayer · TCS Engineer Expo
+        </p>
+
+        {/* Direct Player Join Box */}
+        <div className="landing-join-box">
+          <div className="landing-join-header">
+            <span className="join-phone-icon"></span>
+            <span>PLAYER JOIN</span>
+          </div>
+
+          <form onSubmit={handleJoin} className="landing-join-form">
+            <input
+              className="landing-room-input"
+              placeholder="ENTER 4-LETTER CODE"
+              maxLength={4}
+              value={code}
+              onChange={e => setCode(e.target.value.toUpperCase())}
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="landing-btn-join"
+              disabled={code.trim().length !== 4}
+            >
+              ⚡ Join Game
+            </button>
+          </form>
+        </div>
+
+        <div className="landing-divider">
+          <span>— OR —</span>
+        </div>
+
+        <a href="?host=true" className="landing-btn-host">
+          Host Login
+        </a>
+
+        <div className="landing-ghost-note">
+          Tip: Players can scan the QR code displayed on the Host Screen to join instantly.
+        </div>
       </div>
     </div>
   );

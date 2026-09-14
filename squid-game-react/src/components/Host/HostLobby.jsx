@@ -84,13 +84,18 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
 
   return (
     <div className="lobby-cinema-screen">
-      {/* ── Ambient Geometric Symbols ○ △ □ ─────────────────────────── */}
+      {/* ── Ambient Glowing Geometric Symbols ○ △ □ ─────────────────────────── */}
       <div className="lobby-geo-ambient" aria-hidden="true">
-        <span className="geo-float-shape geo-1">○</span>
-        <span className="geo-float-shape geo-2">△</span>
-        <span className="geo-float-shape geo-3">□</span>
-        <span className="geo-float-shape geo-4">○</span>
-        <span className="geo-float-shape geo-5">△</span>
+        <span className="geo-float-shape geo-1 geo-bloom-pink">○</span>
+        <span className="geo-float-shape geo-2 geo-bloom-cyan">△</span>
+        <span className="geo-float-shape geo-3 geo-bloom-green">□</span>
+        <span className="geo-float-shape geo-4 geo-bloom-pink">○</span>
+        <span className="geo-float-shape geo-5 geo-bloom-cyan">△</span>
+        <span className="geo-float-shape geo-6 geo-bloom-green">□</span>
+        <span className="geo-float-shape geo-7 geo-bloom-pink">○</span>
+        <span className="geo-float-shape geo-8 geo-bloom-cyan">△</span>
+        <span className="geo-float-shape geo-9 geo-bloom-green">□</span>
+        <span className="geo-float-shape geo-10 geo-bloom-pink">○</span>
       </div>
 
       {/* ── TOP SECTION: 3-ZONE COMPOSITION ─────────────────────────── */}

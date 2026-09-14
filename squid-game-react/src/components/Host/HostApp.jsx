@@ -450,14 +450,18 @@ function HostController({ roomCode }) {
   const topControls = (
     <div className="top-controls">
       <div className="top-brand-group">
-        <div className="top-geo-badges">
-          <span className="geo-icon pink">○</span>
-          <span className="geo-icon blue">△</span>
-          <span className="geo-icon green">□</span>
-        </div>
-        <div className="top-title-wrap">
-          <span className="brand">IAE SQUID GAME</span>
-          <span className="brand-tagline">AI • AUTOMATION • INTELLIGENCE</span>
+        <div className="top-brand-badge-pill">
+          <img
+            src="/squid_survival_logo.png"
+            alt="Emblem"
+            className="top-brand-mini-emblem"
+          />
+          <div className="top-title-wrap">
+            <div className="brand-chip-row">
+              <span className="brand-tag-iae">IAE</span>
+              <span className="brand-unique-title">SQUID SURVIVAL</span>
+            </div>
+          </div>
         </div>
       </div>
       <div className="ctrl-btns">

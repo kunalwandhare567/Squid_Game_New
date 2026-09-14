@@ -52,7 +52,7 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
 
     if (isFirst) {
       audio?.sfxWin?.();
-      audio?.say?.(`Congratulations! You are the champion of the IAE Squid Game with ${finalScore} points!`);
+      audio?.say?.(`Congratulations! You are the champion of the IAE Squid Survival with ${finalScore} points!`);
     } else if (isTop3) {
       audio?.sfxCorrect?.();
       audio?.say?.(`Great job! You finished in ${myRank === 2 ? 'second' : 'third'} place with ${finalScore} points.`);
@@ -137,8 +137,7 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
       <div className="scorecard-container">
         {/* ── 1. HEADER ── */}
         <header className="scorecard-header">
-          <div className="brand-logo-title">IAE SQUID GAME</div>
-          <div className="brand-sub-title">AI • AUTOMATION • INTELLIGENCE</div>
+          <div className="brand-logo-title">IAE SQUID SURVIVAL</div>
         </header>
 
         {/* ── 2. HERO RANK & TITLE ── */}

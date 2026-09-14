@@ -1,5 +1,5 @@
 // =====================================================================
-// questions.js — 400 Question Bank for IAE Squid Game (AI Quiz Edition).
+// questions.js — 400 Question Bank for IAE Squid Survival (AI Quiz Edition).
 // Format: { id, text, options[], correctIndex, correctAnswer, why, category }
 // Options are balanced and randomized across 0, 1, 2, 3.
 // =====================================================================

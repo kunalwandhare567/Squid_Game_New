@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { AudioProvider } from './context/AudioContext';
 import HostApp from './components/Host/HostApp';
 import PlayerApp from './components/Player/PlayerApp';
-import { isDeviceRestricted } from './utils/replayRestrictions';
+import { isDeviceRestricted, clearDeviceRestriction, REPLAY_PASSKEY } from './utils/replayRestrictions';
+import { Lock } from 'lucide-react';
 
 /**
  * URL routing:
@@ -66,13 +67,34 @@ function GlobalAmbientGeoShapes() {
 
 function LandingPage() {
   const [code, setCode] = useState('');
-  const isRestricted = isDeviceRestricted();
+  const [repeatOverride, setRepeatOverride] = useState(false);
+  const [showPasskey, setShowPasskey] = useState(false);
+  const [passkey, setPasskey] = useState('');
+  const [passkeyError, setPasskeyError] = useState('');
+
+  const isRestricted = !repeatOverride && isDeviceRestricted();
+
+  function handleUnlockPasskey(e) {
+    e?.preventDefault();
+    if (passkey.trim() === REPLAY_PASSKEY) {
+      clearDeviceRestriction();
+      setRepeatOverride(true);
+      setShowPasskey(false);
+      setPasskeyError('');
+    } else {
+      setPasskeyError('Invalid passkey. Please check with host.');
+    }
+  }
 
   const handleJoin = (e) => {
     e?.preventDefault();
     const clean = code.trim().toUpperCase();
     if (clean.length === 4) {
-      window.location.search = `?room=${clean}`;
+      if (isRestricted) {
+        window.location.search = `?room=${clean}&spec=true`;
+      } else {
+        window.location.search = `?room=${clean}`;
+      }
     }
   };
 
@@ -124,29 +146,24 @@ function LandingPage() {
           AI Quiz · Live Multiplayer · TCS Engineer Expo
         </p>
 
-        {isRestricted && (
-          <div style={{
-            background: 'rgba(255, 45, 120, 0.16)',
-            border: '1px solid rgba(255, 45, 120, 0.45)',
-            color: '#ff94b8',
-            borderRadius: '12px',
-            padding: '10px 14px',
-            fontSize: '12px',
-            fontWeight: '700',
-            marginBottom: '16px',
-            lineHeight: '1.45',
-            textAlign: 'center',
-          }}>
-            🚫 <strong>Match Completed:</strong> You have already played today on this device. You will be able to watch live matches as a Spectator.
-          </div>
-        )}
-
         {/* Direct Player Join Box */}
-        <div className="landing-join-box">
-          <div className="landing-join-header">
+        <div className="landing-join-box" style={isRestricted ? { borderColor: 'rgba(255, 45, 120, 0.45)' } : {}}>
+          <div className="landing-join-header" style={isRestricted ? { color: '#ff8a8a' } : {}}>
             <span className="join-phone-icon"></span>
-            <span>PLAYER JOIN</span>
+            <span>{isRestricted ? '🚫 REPLAY RESTRICTED (1 MATCH LIMIT)' : 'PLAYER JOIN'}</span>
           </div>
+
+          {isRestricted && (
+            <p style={{
+              fontSize: '12.5px',
+              color: '#cbd5e1',
+              margin: '0 0 14px',
+              textAlign: 'center',
+              lineHeight: '1.45'
+            }}>
+              You have already played today on this device. Enter room code to <strong>watch as Spectator</strong>:
+            </p>
+          )}
 
           <form onSubmit={handleJoin} className="landing-join-form">
             <input
@@ -160,11 +177,66 @@ function LandingPage() {
             <button
               type="submit"
               className="landing-btn-join"
+              style={isRestricted ? {
+                background: 'rgba(87, 255, 176, 0.15)',
+                border: '1.5px solid #57ffb0',
+                color: '#57ffb0'
+              } : {}}
               disabled={code.trim().length !== 4}
             >
-              ⚡ Join Game
+              {isRestricted ? '👁️ Watch Live Match as Spectator →' : '⚡ Join Game'}
             </button>
           </form>
+
+          {isRestricted && (
+            <div className="repeat-passkey-wrapper" style={{ marginTop: '12px' }}>
+              {!showPasskey ? (
+                <button
+                  type="button"
+                  className="repeat-passkey-trigger-btn"
+                  onClick={() => {
+                    setShowPasskey(true);
+                    setPasskeyError('');
+                  }}
+                >
+                  <Lock size={12} />
+                  <span>Enter Host Passkey to Replay</span>
+                </button>
+              ) : (
+                <form onSubmit={handleUnlockPasskey} className="repeat-passkey-form animate-fade-in" style={{ marginTop: '8px' }}>
+                  <div className="passkey-input-row">
+                    <input
+                      type="password"
+                      className="passkey-mini-input"
+                      placeholder="Passkey"
+                      maxLength={10}
+                      value={passkey}
+                      onChange={e => {
+                        setPasskey(e.target.value);
+                        setPasskeyError('');
+                      }}
+                      autoFocus
+                    />
+                    <button type="submit" className="passkey-unlock-btn" disabled={!passkey.trim()}>
+                      Unlock ⚡
+                    </button>
+                  </div>
+                  {passkeyError && <div className="passkey-error-text">⚠️ {passkeyError}</div>}
+                  <button
+                    type="button"
+                    className="passkey-cancel-btn"
+                    onClick={() => {
+                      setShowPasskey(false);
+                      setPasskey('');
+                      setPasskeyError('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="landing-divider">

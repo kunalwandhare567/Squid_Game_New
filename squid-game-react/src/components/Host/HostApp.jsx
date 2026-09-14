@@ -431,9 +431,35 @@ function HostController({ roomCode }) {
     await beginRound(gameQuestions, nextIndex);
   }
 
+  // ── Exit Game to Landing Page ──────────────────────────────────────────
+  async function handleExitGame() {
+    try {
+      await supabase.from('rooms').update({
+        phase: 'terminated',
+        meta: { phase: 'terminated', hostExited: true },
+        updated_at: new Date().toISOString(),
+      }).eq('room_code', roomCode);
+
+      await supabase.from('rooms').delete().eq('room_code', roomCode);
+    } catch (e) {
+      console.error('Error terminating room on host exit:', e);
+    }
+    window.location.search = '';
+  }
+
   // ── Restart ───────────────────────────────────────────────────────────
   async function handleRestart() {
-    await supabase.from('rooms').delete().eq('room_code', roomCode);
+    try {
+      await supabase.from('rooms').update({
+        phase: 'terminated',
+        meta: { phase: 'terminated', hostExited: true },
+        updated_at: new Date().toISOString(),
+      }).eq('room_code', roomCode);
+
+      await supabase.from('rooms').delete().eq('room_code', roomCode);
+    } catch (e) {
+      console.error('Error restarting room:', e);
+    }
     window.location.reload();
   }
 
@@ -566,7 +592,7 @@ function HostController({ roomCode }) {
                   className="btn-exit-confirm"
                   onClick={() => {
                     setShowExitConfirm(false);
-                    handleRestart();
+                    handleExitGame();
                   }}
                 >
                   <Power size={15} />

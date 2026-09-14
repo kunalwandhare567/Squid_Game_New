@@ -3,7 +3,9 @@ import { useAudio } from '../../context/AudioContext';
 import { GameProvider, useGame } from '../../context/GameContext';
 import { usePlayerSession } from '../../hooks/usePlayerSession';
 import { GREEN_DURATION_SECS } from '../../utils/ruleEngine';
-import { isDeviceRestricted, markDeviceCompleted } from '../../utils/replayRestrictions';
+import { isDeviceRestricted, markDeviceCompleted, clearDeviceRestriction } from '../../utils/replayRestrictions';
+import DollSvg       from '../Shared/DollSvg';
+import { AlertTriangle, RotateCcw } from 'lucide-react';
 import PlayerJoin    from './PlayerJoin';
 import PlayerWait    from './PlayerWait';
 import PlayerAnswer  from './PlayerAnswer';
@@ -37,7 +39,14 @@ function PlayerController({ roomCode }) {
       return false;
     }
   });
-  const [isSpec, setIsSpec] = useState(false);
+  const [isSpec, setIsSpec] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('spec') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [myChoiceId, setMyChoiceId] = useState(null);
 
   const meta     = state?.meta || {};
@@ -113,10 +122,55 @@ function PlayerController({ roomCode }) {
   const totalRounds = meta.totalRounds || 10;
   const aliveCount = Object.values(state?.players || {}).filter(p => p.alive && !p.spectator).length;
   const totalCount = Object.values(state?.players || {}).filter(p => !p.spectator).length;
+  // Handle host exiting or terminating the game mid-match
+  useEffect(() => {
+    if (phase === 'terminated') {
+      try {
+        sessionStorage.removeItem(`sq_joined_${roomCode}`);
+      } catch (e) {}
+
+      const timer = setTimeout(() => {
+        window.location.search = '';
+      }, 2200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [phase, roomCode]);
 
   let content = null;
 
-  if (phase === 'gameover') {
+  if (phase === 'terminated') {
+    content = (
+      <div className="player-join center repeat-player-screen animate-pop-in">
+        <DollSvg phase="lobby" />
+        <div className="repeat-warning-card" style={{ borderColor: '#ffd257' }}>
+          <div className="repeat-icon-wrap" style={{ background: 'rgba(255, 210, 87, 0.15)', borderColor: '#ffd257' }}>
+            <AlertTriangle size={36} color="#ffd257" />
+          </div>
+
+          <span className="repeat-pill-badge" style={{ color: '#ffd257', borderColor: '#ffd257', background: 'rgba(255, 210, 87, 0.15)' }}>
+            HOST EXITED GAME
+          </span>
+          <h1 className="repeat-title" style={{ color: '#ffd257', textShadow: '0 0 14px rgba(255, 210, 87, 0.4)' }}>
+            ARENA SESSION ENDED
+          </h1>
+
+          <p className="repeat-desc">
+            The host has exited or restarted the arena. Redirecting to the main page to enter the new code and rejoin…
+          </p>
+
+          <button
+            className="cta"
+            onClick={() => {
+              window.location.search = '';
+            }}
+          >
+            ⚡ Enter New Room Code Now →
+          </button>
+        </div>
+      </div>
+    );
+  } else if (phase === 'gameover') {
     content = (
       <PlayerEnd
         me={me}

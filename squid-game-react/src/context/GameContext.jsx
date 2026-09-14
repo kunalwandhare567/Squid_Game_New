@@ -65,6 +65,8 @@ export function GameProvider({ roomCode, children }) {
           };
           dispatch({ type: 'SET_META', payload: metaObj });
           dispatch({ type: 'SET_QUESTION', payload: roomData.question || roomData.meta?.question || null });
+        } else if (!roomData && isMounted) {
+          dispatch({ type: 'SET_META', payload: { phase: 'terminated', hostExited: true, roomCode } });
         }
 
         const { data: playersList } = await supabase
@@ -112,12 +114,18 @@ export function GameProvider({ roomCode, children }) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'rooms', filter: `room_code=eq.${roomCode}` },
         payload => {
+          if (!isMounted) return;
+          if (payload.eventType === 'DELETE') {
+            dispatch({ type: 'SET_META', payload: { phase: 'terminated', hostExited: true, roomCode } });
+            return;
+          }
           const row = payload.new;
-          if (!row || !isMounted) return;
+          if (!row) return;
+          const phase = row.phase || row.meta?.phase || 'lobby';
           const metaObj = {
             startedAt: row.started_at ? new Date(row.started_at).getTime() : Date.now(),
             ...(row.meta || {}),
-            phase: row.phase || row.meta?.phase || 'lobby',
+            phase,
             qIndex: row.q_index != null ? row.q_index : row.meta?.qIndex,
             roomCode: row.room_code,
           };

@@ -92,8 +92,8 @@ function HostController({ roomCode }) {
 
   // ── Listen to live answers during question phase ───────────────────────
   useEffect(() => {
-    if (phase !== 'question' && phase !== 'revival') return;
-    const rkey = isRevival ? 'rev' : `r${roundIndex}`;
+    if (phase !== 'question') return;
+    const rkey = `r${roundIndex}`;
 
     async function fetchInitialAnswers() {
       try {
@@ -141,7 +141,7 @@ function HostController({ roomCode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [phase, roundIndex, isRevival, roomCode]);
+  }, [phase, roundIndex, roomCode]);
 
   // ── Helper: get players as array ──────────────────────────────────────
   const getPlayers = useCallback((filter = 'alive') => {

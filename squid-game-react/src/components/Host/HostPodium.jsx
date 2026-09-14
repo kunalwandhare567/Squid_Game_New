@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { determineWinner, rankPlayers, ROUNDS } from '../../utils/ruleEngine';
 import ConfettiCanvas from '../Shared/ConfettiCanvas';
 import { useAudio } from '../../context/AudioContext';
-import { Trophy, Crown, Award, RotateCcw, Home, Shield, Skull, Sparkles, Share2, Users, Flame, CheckCircle, Zap } from 'lucide-react';
+import { Trophy, Crown, Award, Home, Shield, Skull, Sparkles, Share2, Users, Flame, CheckCircle, Zap } from 'lucide-react';
 
 export default function HostPodium({ players, onRestart }) {
   const audio = useAudio();
@@ -315,11 +315,6 @@ export default function HostPodium({ players, onRestart }) {
 
       {/* 7. ACTION BUTTONS (BOTTOM CENTER) */}
       <footer className="finale-actions-footer">
-        <button className="btn-play-again" onClick={onRestart}>
-          <RotateCcw size={20} className="btn-icon" />
-          <span>↻ PLAY AGAIN</span>
-        </button>
-
         <button className="btn-back-lobby" onClick={onRestart}>
           <Home size={18} className="btn-icon" />
           <span>⌂ BACK TO LOBBY</span>

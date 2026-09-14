@@ -27,7 +27,6 @@ export default function HostQuestion({
   question,
   roundNum,
   totalRounds,
-  isRevival,
   aliveCount,
   roomCode,
   onLock,
@@ -59,7 +58,7 @@ export default function HostQuestion({
     onLightChange?.(light);
   }, [light, onLightChange]);
 
-  const rkey = isRevival ? 'rev' : `r${roundNum - 1}`;
+  const rkey = `r${roundNum - 1}`;
   const effectiveRoomCode = roomCode || state.meta?.roomCode || state.meta?.room_code;
 
   // Real-time Supabase answer count tracker with fast polling fallback

@@ -32,9 +32,9 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
     me?.roundsPlayed ?? me?.rounds_played ?? (isSurvivor ? totalRounds : Math.max(1, totalRounds / 2))
   );
 
-  // Exact tracked correct count with strict bounds for eliminated players
-  const rawCorrect = me?.correctCount ?? me?.correct_count;
-  const correctCount = typeof rawCorrect === 'number'
+  // Exact tracked total correct answers for player score dashboard
+  const rawCorrect = me?.totalCorrect ?? me?.total_correct ?? me?.correctCount ?? me?.correct_count;
+  const totalCorrect = typeof rawCorrect === 'number'
     ? rawCorrect
     : Math.min(
         consecutiveStrikes >= 3 ? Math.max(0, roundsPlayed - 3) : roundsPlayed,
@@ -190,7 +190,7 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
 
           <div className="stat-metric-card">
             <span className="stat-icon">✓</span>
-            <div className="stat-val">{correctCount}</div>
+            <div className="stat-val">{totalCorrect}</div>
             <div className="stat-lbl">CORRECT</div>
           </div>
 

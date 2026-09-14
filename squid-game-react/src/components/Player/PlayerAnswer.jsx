@@ -20,7 +20,6 @@ export default function PlayerAnswer({
   totalRounds = ROUNDS,
   aliveCount = 0,
   totalCount = 0,
-  isRevival = false,
   startTimeMs = null,
   myChoiceId,
   setMyChoiceId
@@ -239,21 +238,15 @@ export default function PlayerAnswer({
           </div>
 
           <div className="player-round-pill">
-            <span className="round-pill-label">{isRevival ? 'REVIVAL' : 'ROUND'}</span>
+            <span className="round-pill-label">ROUND</span>
             <span className="round-pill-count">
-              {isRevival ? 'ROUND' : `${String(roundNum).padStart(2, '0')} / ${String(totalRounds).padStart(2, '0')}`}
+              {`${String(roundNum).padStart(2, '0')} / ${String(totalRounds).padStart(2, '0')}`}
             </span>
           </div>
         </div>
 
-        {/* ── 3. STRIKE WARNING / REVIVAL BANNER ── */}
-        {isRevival && (
-          <div className="player-revival-banner" role="status" style={{ background: 'rgba(58, 160, 255, 0.18)', border: '1.5px solid #3aa0ff', borderRadius: '12px', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#93c5fd', fontSize: 'clamp(11px, 2.4vw, 13px)', fontWeight: 800 }}>
-            <span>⭐ REVIVAL CHANCE · FASTEST CORRECT ANSWERS REJOIN THE GAME!</span>
-          </div>
-        )}
-
-        {strikeCount === 1 && !locked && !isRevival && (
+        {/* ── 3. STRIKE WARNING BANNER ── */}
+        {strikeCount === 1 && !locked && (
           <div className="player-strike-banner" role="alert">
             <AlertTriangle className="strike-icon" size={16} />
             <span className="strike-banner-text">
@@ -262,7 +255,7 @@ export default function PlayerAnswer({
           </div>
         )}
 
-        {strikeCount >= 2 && !locked && !isRevival && (
+        {strikeCount >= 2 && !locked && (
           <div className="player-strike-banner banner-danger" role="alert" style={{ background: 'rgba(255, 45, 120, 0.18)', borderColor: '#ff2d78', color: '#ff6b9d' }}>
             <AlertTriangle className="strike-icon" size={16} color="#ff2d78" />
             <span className="strike-banner-text">

@@ -11,8 +11,6 @@ export const CONSECUTIVE_WRONG_LIMIT = 3;     // 3 consecutive wrong = eliminate
 export const MIN_PLAYERS            = 5;      // min 5 players to start
 export const MAX_PLAYERS            = 15;     // max 15 active players
 export const ROUNDS                 = 10;
-export const REVIVE_AFTER_ROUND     = 3;      // revival round after round 3
-export const REVIVE_MAX             = 3;      // up to 3 can rejoin
 export const GREEN_DURATION_SECS    = 10;     // 10s question countdown (5s green + 5s blink)
 export const GRACE_PERIOD_MS        = 1200;   // wait after lock before reading answers
 export const ANSWER_FRAC            = 0.60;   // 60% must answer before red arms
@@ -36,10 +34,9 @@ export function computeSpeedBonus(answerMs, windowMs = BONUS_WINDOW_MS) {
  * @param {object|null} answer              - { choiceId, choiceText, submittedAt, ddOn, shieldOn }
  * @param {object|string} questionOrCorrect - Question object or correctId string
  * @param {number}      greenStartAt        - Server timestamp when green began
- * @param {boolean}     isRevival           - Revival = no speed bonus
  * @returns {{ points, correct, speedMs }}
  */
-export function computeRoundScore(answer, questionOrCorrect, greenStartAt, isRevival = false) {
+export function computeRoundScore(answer, questionOrCorrect, greenStartAt) {
   if (!answer || (!answer.choiceId && !answer.choiceText)) {
     return { points: 0, correct: false, speedMs: null };
   }
@@ -123,7 +120,7 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
     const currentScore = Number(player.score) || 0;
     const newScore     = Math.max(0, currentScore + points);
 
-    const prevCorrect  = Number(player.correctCount ?? player.correct_count ?? 0);
+    const prevCorrect  = Number(player.totalCorrect ?? player.total_correct ?? player.correctCount ?? player.correct_count ?? 0);
     const newCorrect   = correct ? prevCorrect + 1 : prevCorrect;
     const prevRounds   = Number(player.roundsPlayed ?? player.rounds_played ?? 0);
     const newRounds    = prevRounds + 1;
@@ -134,6 +131,8 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
     playerStates[player.id].total_strikes     = newTotalStrikes;
     playerStates[player.id].strikes           = newTotalStrikes; // Supabase 'strikes' column stores cumulative total strikes
     playerStates[player.id].score             = newScore;
+    playerStates[player.id].totalCorrect      = newCorrect;
+    playerStates[player.id].total_correct     = newCorrect;
     playerStates[player.id].correctCount      = newCorrect;
     playerStates[player.id].correct_count     = newCorrect;
     playerStates[player.id].roundsPlayed      = newRounds;
@@ -148,6 +147,7 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
       consecutiveWrong: newConsec,
       totalStrikes:     newTotalStrikes,
       newScore,
+      totalCorrect:     newCorrect,
       correctCount:     newCorrect,
       roundsPlayed:     newRounds,
       autoEliminated:   false,
@@ -185,28 +185,6 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
 }
 
 /**
- * resolveRevival
- * Fastest correct answers from eliminated players rejoin (up to REVIVE_MAX).
- */
-export function resolveRevival(eliminatedPlayers, answers, questionOrId, greenStartAt) {
-  const correct = eliminatedPlayers
-    .filter(p => {
-      const ans = answers[p.id];
-      if (!ans) return false;
-      return computeRoundScore(ans, questionOrId, greenStartAt, true).correct;
-    })
-    .map(p => ({
-      id: p.id,
-      speedMs: (answers[p.id]?.submittedAt && greenStartAt)
-        ? Math.max(0, answers[p.id].submittedAt - greenStartAt)
-        : Infinity,
-    }))
-    .sort((a, b) => a.speedMs - b.speedMs);
-
-  return correct.slice(0, REVIVE_MAX).map(x => x.id);
-}
-
-/**
  * rankPlayers
  * Authoritative leaderboard sorting:
  * 1. Alive survivors always rank higher than eliminated players
@@ -222,6 +200,8 @@ export function rankPlayers(players) {
       score: Number(p.score) || 0,
       totalStrikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
       strikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
+      totalCorrect: Number(p.totalCorrect ?? p.total_correct ?? p.correctCount ?? p.correct_count ?? 0),
+      correctCount: Number(p.totalCorrect ?? p.total_correct ?? p.correctCount ?? p.correct_count ?? 0),
       consecutiveWrong: Number(p.consecutiveWrong ?? p.consecutive_wrong ?? 0),
       joinOrder: Number(p.joinOrder ?? p.join_order ?? 99),
       alive: !!p.alive

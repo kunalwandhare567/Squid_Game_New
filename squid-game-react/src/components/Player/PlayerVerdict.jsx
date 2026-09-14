@@ -3,7 +3,6 @@ import { useAudio } from '../../context/AudioContext';
 import ConfettiCanvas from '../Shared/ConfettiCanvas';
 import DollSvg from '../Shared/DollSvg';
 import { CheckCircle, XCircle, AlertTriangle, Skull, Award, HelpCircle } from 'lucide-react';
-import { REVIVE_AFTER_ROUND } from '../../utils/ruleEngine';
 
 export default function PlayerVerdict({ me, question, myChoiceId, roundKey, roomCode, roundNum: propRoundNum, totalRounds = 10, onVerdictResult }) {
   const audio = useAudio();
@@ -126,8 +125,6 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
 
   // ── CASE 2: ELIMINATED (3 STRIKES) ──────────────────────────────────
   if (isEliminated) {
-    const hasRevivalChance = roundNum <= REVIVE_AFTER_ROUND;
-
     return (
       <div className="verdict-screen center verdict-wrong-screen verdict-elim-screen">
         <div className="skull">💀</div>
@@ -155,23 +152,13 @@ export default function PlayerVerdict({ me, question, myChoiceId, roundKey, room
           )}
         </div>
 
-        {hasRevivalChance ? (
-          <div className="revival-notice-box">
-            <span className="rev-icon">⭐</span>
-            <div>
-              <strong>Revival Round Coming Soon!</strong>
-              <p>Eliminated players get ONE chance to re-enter the game after Round {REVIVE_AFTER_ROUND}. Stay tuned!</p>
-            </div>
+        <div className="revival-notice-box" style={{ borderColor: 'rgba(255, 90, 90, 0.4)', background: 'rgba(255, 45, 120, 0.1)' }}>
+          <span className="rev-icon">🔒</span>
+          <div>
+            <strong>Eliminated Permanently</strong>
+            <p>You have reached 3 consecutive wrong answers and are out. Watch the remaining finalists on the big screen!</p>
           </div>
-        ) : (
-          <div className="revival-notice-box" style={{ borderColor: 'rgba(255, 90, 90, 0.4)', background: 'rgba(255, 45, 120, 0.1)' }}>
-            <span className="rev-icon">🔒</span>
-            <div>
-              <strong>Eliminated Permanently</strong>
-              <p>You have used all strikes. Watch the remaining finalists on the big screen!</p>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     );
   }

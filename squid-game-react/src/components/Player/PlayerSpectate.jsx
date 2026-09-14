@@ -3,8 +3,8 @@ import DollSvg from '../Shared/DollSvg';
 import LightBanner from '../Shared/LightBanner';
 
 export default function PlayerSpectate({ phase, question }) {
-  const lightState = (phase === 'question' || phase === 'revival') ? 'green'
-                   : (phase === 'locked')                          ? 'red'
+  const lightState = (phase === 'question') ? 'green'
+                   : (phase === 'locked')   ? 'red'
                    : 'idle';
   return (
     <div className="center">

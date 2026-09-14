@@ -1,7 +1,3 @@
-// =====================================================================
-// PlayerApp.jsx — Player root. Listens to Supabase via GameContext,
-// routes phase screens. Uses sessionStorage pid so phone refresh = same player.
-// =====================================================================
 import React, { useState, useEffect } from 'react';
 import { useAudio } from '../../context/AudioContext';
 import { GameProvider, useGame } from '../../context/GameContext';
@@ -10,7 +6,6 @@ import PlayerJoin    from './PlayerJoin';
 import PlayerWait    from './PlayerWait';
 import PlayerAnswer  from './PlayerAnswer';
 import PlayerVerdict from './PlayerVerdict';
-import PlayerRevival from './PlayerRevival';
 import PlayerSpectate from './PlayerSpectate';
 import PlayerEnd     from './PlayerEnd';
 
@@ -70,7 +65,7 @@ function PlayerController({ roomCode }) {
 
   // Reset answer selection ONLY when a new question round starts
   useEffect(() => {
-    if (phase === 'question' || phase === 'revival') {
+    if (phase === 'question') {
       setMyChoiceId(null);
       setVerdictStatus('safe');
       try {
@@ -83,7 +78,7 @@ function PlayerController({ roomCode }) {
   useEffect(() => {
     if (!joined) return;
 
-    if (phase === 'question' || phase === 'revival') {
+    if (phase === 'question') {
       audio.stopBeat();
       audio.startBeat(10000);
     } else {
@@ -124,45 +119,13 @@ function PlayerController({ roomCode }) {
         pid={pid}
       />
     );
-  } else if (phase === 'revival') {
-    if (!isEliminated) {
-      content = (
-        <PlayerWait
-          me={me}
-          type="safe"
-          title="🛡️ YOU ARE SAFE & ADVANCING!"
-          message="You survived! Eliminated players are currently competing in a 1-question Revival Challenge. Round 3 will begin immediately after."
-        />
-      );
-    } else {
-      content = (
-        <PlayerAnswer
-          key={question?.id || 'rev'}
-          roomCode={roomCode} pid={pid}
-          question={question} locked={false}
-          me={me} roundKey="rev"
-          roundNum={roundNum} totalRounds={totalRounds}
-          aliveCount={aliveCount} totalCount={totalCount}
-          isRevival={true}
-          startTimeMs={meta?.startedAt}
-          myChoiceId={myChoiceId} setMyChoiceId={setMyChoiceId}
-        />
-      );
-    }
-  } else if (phase === 'revreveal') {
-    content = <PlayerRevival me={me} />;
   } else if ((phase === 'question' || phase === 'locked') && isEliminated) {
-    const hasUpcomingRevival = roundNum <= 2;
     content = (
       <PlayerWait
         me={me}
         type="eliminated"
         title="💀 ELIMINATED (3 STRIKES)"
-        message={
-          hasUpcomingRevival
-            ? "You reached 3 consecutive wrong answers and are out. Watch the big screen — you will get ONE chance in the Revival Round after Round 2 to re-enter!"
-            : "You were eliminated after 3 consecutive wrong answers and cannot continue. Watch the remaining finalists compete on the big screen!"
-        }
+        message="You were eliminated after 3 consecutive wrong answers and cannot continue. Watch the remaining finalists compete on the big screen!"
       />
     );
   } else if (phase === 'question' || phase === 'locked') {
@@ -174,7 +137,6 @@ function PlayerController({ roomCode }) {
         me={me} roundKey={currentRoundKey}
         roundNum={roundNum} totalRounds={totalRounds}
         aliveCount={aliveCount} totalCount={totalCount}
-        isRevival={false}
         startTimeMs={meta?.startedAt}
         myChoiceId={myChoiceId} setMyChoiceId={setMyChoiceId}
       />
@@ -197,7 +159,7 @@ function PlayerController({ roomCode }) {
   }
 
   const isWrongVerdict = phase === 'reveal' && (verdictStatus === 'wrong' || verdictStatus === 'eliminated');
-  const appBgClass = phase === 'question' || phase === 'revival'
+  const appBgClass = phase === 'question'
     ? 'bg-green'
     : phase === 'locked'
     ? 'bg-red'

@@ -7,8 +7,8 @@ import { supabase } from '../../supabase';
 import { useAudio } from '../../context/AudioContext';
 import { GameProvider, useGame } from '../../context/GameContext';
 import {
-  buildGameSet, resolveRound, resolveRevival, determineWinner,
-  generateRoomCode, ROUNDS, REVIVE_AFTER_ROUND, REVIVE_MAX,
+  buildGameSet, resolveRound, determineWinner,
+  generateRoomCode, ROUNDS,
   MAX_PLAYERS, MIN_PLAYERS, ANSWER_FRAC, GRACE_PERIOD_MS,
   GREEN_DURATION_SECS, CONSECUTIVE_WRONG_LIMIT
 } from '../../utils/ruleEngine';
@@ -16,7 +16,6 @@ import { QUESTIONS } from '../../data/questions';
 import HostLobby    from './HostLobby';
 import HostQuestion from './HostQuestion';
 import HostReveal   from './HostReveal';
-import HostRevival  from './HostRevival';
 import HostPodium   from './HostPodium';
 import HostAuthGate, { isHostAuthenticated } from './HostAuthGate';
 import { Volume2, VolumeX, Power, AlertTriangle } from 'lucide-react';
@@ -54,10 +53,7 @@ function HostController({ roomCode }) {
   const [phase,        setPhase]        = useState('lobby');
   const [gameQuestions, setGameQuestions] = useState([]);
   const [roundIndex,   setRoundIndex]   = useState(0);
-  const [isRevival,    setIsRevival]    = useState(false);
-  const [revivalDone,  setRevivalDone]  = useState(false);
   const [revealData,   setRevealData]   = useState(null); // { results, eliminations, survivors }
-  const [revivalResult,setRevivalResult]= useState(null); // { revivedIds }
   const [isMuted,      setIsMuted]      = useState(false);
   const [isVoiceOn,    setIsVoiceOn]    = useState(true);
   const [botCount,     setBotCount]     = useState(0);
@@ -194,18 +190,16 @@ function HostController({ roomCode }) {
     const qs = buildGameSet(QUESTIONS, ROUNDS);
     setGameQuestions(qs);
     setRoundIndex(0);
-    setRevivalDone(false);
-    await beginRound(qs, 0, false);
+    await beginRound(qs, 0);
   }
 
   // ── Begin a round ─────────────────────────────────────────────────────
-  async function beginRound(qs, idx, revival) {
+  async function beginRound(qs, idx) {
     lockGuard.current = false;
-    const q    = qs[revival ? ROUNDS : idx];
-    const rkey = revival ? 'rev' : `r${idx}`;
+    const q    = qs[idx];
+    const rkey = `r${idx}`;
 
-    setPhase(revival ? 'revival' : 'question');
-    setIsRevival(revival);
+    setPhase('question');
     answersRef.current = {};
 
     const nowIso = new Date().toISOString();
@@ -215,7 +209,7 @@ function HostController({ roomCode }) {
     // Update room in Supabase (WITHOUT correctId for anti-cheat)
     await supabase.from('rooms').upsert({
       room_code: roomCode,
-      phase: revival ? 'revival' : 'question',
+      phase: 'question',
       q_index: idx,
       question: {
         id: q.id,
@@ -223,7 +217,6 @@ function HostController({ roomCode }) {
         options: q.options,
         correctId: null, // hidden until reveal
         why: q.why,
-        revival: !!revival,
       },
       meta: {
         qIndex: idx,
@@ -232,7 +225,7 @@ function HostController({ roomCode }) {
         hostAlive: true,
         maxPlayers: MAX_PLAYERS,
         minPlayers: MIN_PLAYERS,
-        phase: revival ? 'revival' : 'question',
+        phase: 'question',
         startedAt: nowMs,
       },
       started_at: nowIso,
@@ -243,15 +236,15 @@ function HostController({ roomCode }) {
     audio.startBeat(GREEN_DURATION_SECS * 1000);
 
     // Schedule bot answers
-    scheduleBots(q, rkey, revival);
+    scheduleBots(q, rkey);
   }
 
   // ── Schedule bot answers ──────────────────────────────────────────────
-  function scheduleBots(q, rkey, revival) {
+  function scheduleBots(q, rkey) {
     const bots = [...botIds.current]
       .filter(id => {
         const p = state.players[id];
-        return p && (revival ? !p.alive : p.alive);
+        return p && p.alive;
       });
 
     bots.forEach(id => {
@@ -297,7 +290,7 @@ function HostController({ roomCode }) {
     // GRACE PERIOD: wait before reading answers
     await new Promise(r => setTimeout(r, GRACE_PERIOD_MS));
 
-    const rkey = isRevival ? 'rev' : `r${roundIndex}`;
+    const rkey = `r${roundIndex}`;
     const { data: dbAnswers } = await supabase
       .from('answers')
       .select('*')
@@ -316,14 +309,9 @@ function HostController({ roomCode }) {
       });
     }
 
-    const q = gameQuestions[isRevival ? ROUNDS : roundIndex];
-
-    if (isRevival) {
-      await doRevivalResolve(answers, q);
-    } else {
-      await doResolve(answers, q);
-    }
-  }, [lockGuard, isRevival, roundIndex, gameQuestions, roomCode, greenStartAt]);
+    const q = gameQuestions[roundIndex];
+    await doResolve(answers, q);
+  }, [lockGuard, roundIndex, gameQuestions, roomCode, greenStartAt]);
 
   // ── Batch player updates with retry for bulletproof live event stability ───
   async function batchUpdatePlayerStates(playerList) {
@@ -416,67 +404,10 @@ function HostController({ roomCode }) {
     else audio.sfxCorrect();
   }
 
-  // ── Resolve revival round ─────────────────────────────────────────────
-  async function doRevivalResolve(answers, q) {
-    const eliminated = getPlayers('dead');
-    const revivedIds = resolveRevival(eliminated, answers, q, greenStartAt);
-
-    if (revivedIds.length > 0) {
-      const revivedList = eliminated
-        .filter(p => revivedIds.includes(p.id))
-        .map(p => ({
-          ...p,
-          alive: true,
-          consecutiveWrong: 0,
-          consecutive_wrong: 0,
-        }));
-      if (dispatch) {
-        const updated = { ...(state.players || {}) };
-        revivedList.forEach(p => { updated[p.id] = p; });
-        dispatch({ type: 'SET_PLAYERS', payload: updated });
-      }
-      await batchUpdatePlayerStates(revivedList);
-    }
-
-    setRevivalResult({ revivedIds, question: q });
-    setRevivalDone(true);
-    setPhase('revreveal');
-
-    // Reveal correctId and change phase
-    try {
-      await supabase.from('rooms').update({
-        phase: 'revreveal',
-        question: {
-          id: q.id,
-          text: q.text,
-          options: q.options,
-          correctId: q.correctId,
-          correctAnswer: q.correctAnswer || (q.options ? q.options[q.correctId] : ''),
-          why: q.why,
-          revival: true,
-        },
-        meta: {
-          phase: 'revreveal',
-          qIndex: REVIVE_AFTER_ROUND,
-          rkey: 'rev',
-          roomCode,
-          hostAlive: true,
-          maxPlayers: MAX_PLAYERS,
-          minPlayers: MIN_PLAYERS,
-        },
-        updated_at: new Date().toISOString(),
-      }).eq('room_code', roomCode);
-    } catch (err) {
-      console.error('Error updating room to revreveal:', err);
-    }
-
-    if (revivedIds.length > 0) audio.sfxRevival();
-  }
-
   // ── Proceed to next round ─────────────────────────────────────────────
   async function handleNext() {
     const aliveCount = getPlayers('alive').length;
-    const nextIndex  = isRevival ? REVIVE_AFTER_ROUND : roundIndex + 1;
+    const nextIndex  = roundIndex + 1;
 
     if (nextIndex >= ROUNDS || aliveCount <= 1) {
       await supabase.from('rooms').update({
@@ -493,15 +424,8 @@ function HostController({ roomCode }) {
       return;
     }
 
-    const deadCount = getPlayers('dead').length;
-    if (nextIndex === REVIVE_AFTER_ROUND && !revivalDone && deadCount > 0) {
-      setRoundIndex(REVIVE_AFTER_ROUND);
-      await beginRound(gameQuestions, REVIVE_AFTER_ROUND, true);
-      return;
-    }
-
     setRoundIndex(nextIndex);
-    await beginRound(gameQuestions, nextIndex, false);
+    await beginRound(gameQuestions, nextIndex);
   }
 
   // ── Restart ───────────────────────────────────────────────────────────
@@ -547,7 +471,7 @@ function HostController({ roomCode }) {
     </div>
   );
 
-  const appBgClass = (phase === 'question' || phase === 'revival')
+  const appBgClass = phase === 'question'
     ? (hostLight === 'red' || hostLight === 'fake-red' ? 'bg-red' : hostLight === 'alert' ? 'bg-alert' : 'bg-green')
     : phase === 'locked'
     ? 'bg-red'
@@ -573,13 +497,12 @@ function HostController({ roomCode }) {
           />
         )}
 
-        {(phase === 'question' || phase === 'revival') && gameQuestions.length > 0 && (
+        {phase === 'question' && gameQuestions.length > 0 && (
           <HostQuestion
-            question={gameQuestions[isRevival ? ROUNDS : roundIndex]}
+            question={gameQuestions[roundIndex]}
             roundNum={roundIndex + 1}
             totalRounds={ROUNDS}
-            isRevival={isRevival}
-            aliveCount={getPlayers(isRevival ? 'dead' : 'alive').length}
+            aliveCount={getPlayers('alive').length}
             roomCode={roomCode}
             onLock={handleLock}
             onLightChange={setHostLight}
@@ -601,14 +524,6 @@ function HostController({ roomCode }) {
             onToggleMute={toggleMute}
             isMuted={isMuted}
             onExit={() => setShowExitConfirm(true)}
-          />
-        )}
-
-        {phase === 'revreveal' && revivalResult && (
-          <HostRevival
-            revivedIds={revivalResult.revivedIds}
-            players={state.players}
-            onNext={handleNext}
           />
         )}
 

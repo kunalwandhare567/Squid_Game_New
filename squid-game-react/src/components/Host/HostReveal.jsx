@@ -283,8 +283,9 @@ export default function HostReveal({
 
               <div className="survivor-table-header">
                 <span className="surv-th-rank">#</span>
+                <span className="surv-th-avatar"></span>
                 <span className="surv-th-player">PLAYER</span>
-                <span className="surv-th-score">SCORE</span>
+                <span className="surv-th-score">SCORE & SPEED</span>
                 <span className="surv-th-status">STATUS</span>
               </div>
 
@@ -372,6 +373,7 @@ export default function HostReveal({
                 <>
                   <div className="elim-table-header">
                     <span className="elim-th-rank">#</span>
+                    <span className="elim-th-avatar"></span>
                     <span className="elim-th-player">FALLEN PLAYER</span>
                     <span className="elim-th-ans">ANS</span>
                     <span className="elim-th-score">SCORE</span>

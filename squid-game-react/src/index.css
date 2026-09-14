@@ -5159,17 +5159,17 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 /* ── 3. MAIN GAME AREA (LEFT: SURVIVORS & ELIMINATED STACK | RIGHT: EXPANDED TRACK) ── */
 .reveal-main-arena {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 10px;
+  grid-template-columns: 460px 1fr;
+  gap: 12px;
   align-items: stretch;
   flex: 1;
   min-height: 0;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1250px) {
   .reveal-main-arena {
-    grid-template-columns: 320px 1fr;
-    gap: 8px;
+    grid-template-columns: 410px 1fr;
+    gap: 10px;
   }
 }
 
@@ -5236,15 +5236,23 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 
 .survivor-table-header {
   display: grid;
-  grid-template-columns: 22px 24px 1fr 62px 66px;
+  grid-template-columns: 24px 26px 1fr 145px 65px;
   gap: 6px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   font-size: 8.5px;
   font-weight: 900;
   letter-spacing: 0.8px;
   color: #64748b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 4px;
+}
+
+.surv-th-score {
+  text-align: right;
+}
+
+.surv-th-status {
+  text-align: right;
 }
 
 .survivor-rows-container {
@@ -5270,11 +5278,11 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 
 .survivor-player-card {
   display: grid;
-  grid-template-columns: 22px 24px 1fr 62px 66px;
+  grid-template-columns: 24px 26px 1fr 145px 65px;
   align-items: center;
   gap: 6px;
-  padding: 4px 6px;
-  border-radius: 7px;
+  padding: 5px 8px;
+  border-radius: 8px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 11px;
@@ -5326,26 +5334,29 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 
 .surv-player-score-col {
   display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 3px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
   white-space: nowrap;
 }
 
 .surv-score-val {
   font-weight: 900;
-  font-size: 10px;
+  font-size: 10.5px;
   color: #ffd257;
 }
 
 .surv-delta-txt {
-  font-size: 8px;
-  font-weight: 800;
+  font-size: 8.5px;
+  font-weight: 900;
 }
 .txt-plus { color: #57ffb0; }
 .txt-zero { color: #64748b; }
 
 .surv-status-col {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   text-align: right;
   font-size: 7.5px;
   font-weight: 900;
@@ -5439,9 +5450,9 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 
 .elim-table-header {
   display: grid;
-  grid-template-columns: 20px 22px 1fr 28px 48px 56px;
-  gap: 5px;
-  padding: 2px 5px;
+  grid-template-columns: 24px 26px 1fr 34px 55px 65px;
+  gap: 6px;
+  padding: 3px 8px;
   font-size: 8px;
   font-weight: 900;
   letter-spacing: 0.8px;
@@ -5473,11 +5484,11 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 
 .elim-player-row-card {
   display: grid;
-  grid-template-columns: 20px 22px 1fr 28px 48px 56px;
+  grid-template-columns: 24px 26px 1fr 34px 55px 65px;
   align-items: center;
-  gap: 5px;
-  padding: 3px 5px;
-  border-radius: 5px;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
   background: rgba(255, 90, 90, 0.08);
   border: 1px solid rgba(255, 90, 90, 0.25);
   font-size: 10px;

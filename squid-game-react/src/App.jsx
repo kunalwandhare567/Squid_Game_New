@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AudioProvider } from './context/AudioContext';
 import HostApp from './components/Host/HostApp';
 import PlayerApp from './components/Player/PlayerApp';
+import { isDeviceRestricted } from './utils/replayRestrictions';
 
 /**
  * URL routing:
@@ -65,6 +66,7 @@ function GlobalAmbientGeoShapes() {
 
 function LandingPage() {
   const [code, setCode] = useState('');
+  const isRestricted = isDeviceRestricted();
 
   const handleJoin = (e) => {
     e?.preventDefault();
@@ -121,6 +123,23 @@ function LandingPage() {
         <p className="landing-subtitle">
           AI Quiz · Live Multiplayer · TCS Engineer Expo
         </p>
+
+        {isRestricted && (
+          <div style={{
+            background: 'rgba(255, 45, 120, 0.16)',
+            border: '1px solid rgba(255, 45, 120, 0.45)',
+            color: '#ff94b8',
+            borderRadius: '12px',
+            padding: '10px 14px',
+            fontSize: '12px',
+            fontWeight: '700',
+            marginBottom: '16px',
+            lineHeight: '1.45',
+            textAlign: 'center',
+          }}>
+            🚫 <strong>Match Completed:</strong> You have already played today on this device. You will be able to watch live matches as a Spectator.
+          </div>
+        )}
 
         {/* Direct Player Join Box */}
         <div className="landing-join-box">

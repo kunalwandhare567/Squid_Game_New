@@ -5,21 +5,22 @@
 
 export const BASE_POINTS            = 2;
 export const SPEED_BONUS_MAX        = 3;
-export const BONUS_WINDOW_MS        = 10000; // 10s window (5s green + 5s blink)
+export const BONUS_WINDOW_MS        = 15000; // 15s window (10s green + 5s blink)
 export const ELIM_RATIO             = 4;      // bottom 1-in-4 eliminated
 export const CONSECUTIVE_WRONG_LIMIT = 3;     // 3 consecutive wrong = eliminate
 export const MIN_PLAYERS            = 5;      // min 5 players to start
 export const MAX_PLAYERS            = 15;     // max 15 active players
 export const ROUNDS                 = 10;
-export const GREEN_DURATION_SECS    = 10;     // 10s question countdown (5s green + 5s blink)
+export const GREEN_DURATION_SECS    = 15;     // 15s question countdown (10s green + 5s blink)
 export const GRACE_PERIOD_MS        = 1200;   // wait after lock before reading answers
 export const ANSWER_FRAC            = 0.60;   // 60% must answer before red arms
 
 /**
  * computeSpeedBonus
  * Faster answers earn more bonus points (up to SPEED_BONUS_MAX).
- * Answer at 0ms = full 3 bonus. Answer at 10000ms = 0 bonus.
- */
+ * Answer at 0ms = full 3 bonus. Answer at 15000ms = 0 bonus.
+
+*/
 export function computeSpeedBonus(answerMs, windowMs = BONUS_WINDOW_MS) {
   if (answerMs == null || answerMs < 0) return 0;
   const fraction = Math.max(0, 1 - answerMs / windowMs);
@@ -122,7 +123,7 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
 
     const prevCorrect  = Number(player.totalCorrect ?? player.total_correct ?? player.correctCount ?? player.correct_count ?? 0);
     const newCorrect   = correct ? prevCorrect + 1 : prevCorrect;
-    const roundSpeedMs = (speedMs != null && !isNaN(speedMs)) ? speedMs : 10000;
+    const roundSpeedMs = (speedMs != null && !isNaN(speedMs)) ? speedMs : 15000;
     const prevTotalSpeedMs = Number(player.totalSpeedMs ?? player.total_speed_ms ?? 0);
     const newTotalSpeedMs  = prevTotalSpeedMs + roundSpeedMs;
     const prevRounds   = Number(player.roundsPlayed ?? player.rounds_played ?? 0);
@@ -212,7 +213,7 @@ export function rankPlayers(players) {
       ...p,
       score: Number(p.score) || 0,
       totalSpeedMs: Number(p.totalSpeedMs ?? p.total_speed_ms ?? 999999),
-      avgSpeedMs: Number(p.avgSpeedMs ?? p.avg_speed_ms ?? 10000),
+      avgSpeedMs: Number(p.avgSpeedMs ?? p.avg_speed_ms ?? 15000),
       lastSpeedMs: p.lastSpeedMs != null ? Number(p.lastSpeedMs) : null,
       totalStrikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
       strikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),

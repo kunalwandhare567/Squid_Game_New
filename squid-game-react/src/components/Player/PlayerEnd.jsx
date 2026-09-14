@@ -1,10 +1,11 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import ConfettiCanvas from '../Shared/ConfettiCanvas';
 import { useAudio } from '../../context/AudioContext';
+import { markDeviceCompleted } from '../../utils/replayRestrictions';
 import { rankPlayers } from '../../utils/ruleEngine';
 import {
   Trophy, Medal, Award, Flame, CheckCircle2, RotateCcw,
-  Sparkles, ChevronDown, ChevronUp, Users, Crown, Shield
+  Sparkles, ChevronDown, ChevronUp, Users, Crown, Shield, Zap, Star
 } from 'lucide-react';
 
 export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
@@ -43,12 +44,9 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
         Math.max(0, Math.floor(finalScore / 2))
       );
 
-  // Sound cue on finale reveal & record arena_completed_date
+  // Sound cue on finale reveal & record arena completion
   useEffect(() => {
-    try {
-      const todayStr = new Date().toISOString().slice(0, 10);
-      localStorage.setItem('arena_completed_date', todayStr);
-    } catch (e) {}
+    markDeviceCompleted();
 
     if (isFirst) {
       audio?.sfxWin?.();

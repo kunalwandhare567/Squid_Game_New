@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAudio } from '../../context/AudioContext';
 import { GameProvider, useGame } from '../../context/GameContext';
 import { usePlayerSession } from '../../hooks/usePlayerSession';
+import { GREEN_DURATION_SECS } from '../../utils/ruleEngine';
+import { isDeviceRestricted, markDeviceCompleted } from '../../utils/replayRestrictions';
 import PlayerJoin    from './PlayerJoin';
 import PlayerWait    from './PlayerWait';
 import PlayerAnswer  from './PlayerAnswer';
 import PlayerVerdict from './PlayerVerdict';
 import PlayerSpectate from './PlayerSpectate';
 import PlayerEnd     from './PlayerEnd';
+import PlayerReplayBlocked from './PlayerReplayBlocked';
 
 export default function PlayerApp({ roomCode }) {
   return (
@@ -22,9 +25,13 @@ function PlayerController({ roomCode }) {
   const { pid } = usePlayerSession();
   const audio   = useAudio();
 
-  // Auto-detect if player was already joined in this room session
+  const [repeatOverride, setRepeatOverride] = useState(false);
+  const isRestricted = !repeatOverride && isDeviceRestricted();
+
+  // Auto-detect if player was already joined in this room session (unless restricted)
   const [joined, setJoined] = useState(() => {
     try {
+      if (isDeviceRestricted()) return false;
       return sessionStorage.getItem(`sq_joined_${roomCode}`) === 'true';
     } catch (e) {
       return false;
@@ -38,8 +45,16 @@ function PlayerController({ roomCode }) {
   const question = state?.question || null;
   const me       = state?.players?.[pid] || null;
 
-  // Auto-sync joined state when player record arrives from Supabase
+  // Auto-sync joined state when player record arrives from Supabase (unless replay-restricted)
   useEffect(() => {
+    if (isRestricted && !isSpec && phase !== 'gameover') {
+      try {
+        sessionStorage.removeItem(`sq_joined_${roomCode}`);
+      } catch (e) {}
+      setJoined(false);
+      return;
+    }
+
     if (me && !joined) {
       setJoined(true);
       setIsSpec(Boolean(me.spectator));
@@ -47,7 +62,7 @@ function PlayerController({ roomCode }) {
         sessionStorage.setItem(`sq_joined_${roomCode}`, 'true');
       } catch (e) {}
     }
-  }, [me, joined, roomCode]);
+  }, [me, joined, roomCode, isRestricted, isSpec, phase]);
 
   const isEliminated = me ? (!me.alive && !me.spectator) : false;
 
@@ -56,10 +71,7 @@ function PlayerController({ roomCode }) {
   // Mark game as completed for today when game finishes
   useEffect(() => {
     if (phase === 'gameover') {
-      try {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        localStorage.setItem('arena_completed_date', todayStr);
-      } catch (e) {}
+      markDeviceCompleted();
     }
   }, [phase]);
 
@@ -80,7 +92,7 @@ function PlayerController({ roomCode }) {
 
     if (phase === 'question') {
       audio.stopBeat();
-      audio.startBeat(10000);
+      audio.startBeat(GREEN_DURATION_SECS * 1000);
     } else {
       audio.stopBeat();
     }
@@ -104,13 +116,7 @@ function PlayerController({ roomCode }) {
 
   let content = null;
 
-  if (!joined) {
-    content = <PlayerJoin roomCode={roomCode} pid={pid} onJoined={handleJoined} />;
-  } else if (isSpec) {
-    content = <PlayerSpectate phase={phase} question={question} />;
-  } else if (phase === 'lobby') {
-    content = <PlayerWait me={me} title="🎮 IN LOBBY" message="You're connected! Waiting for the host to start the game…" type="lobby" />;
-  } else if (phase === 'gameover') {
+  if (phase === 'gameover') {
     content = (
       <PlayerEnd
         me={me}
@@ -119,6 +125,21 @@ function PlayerController({ roomCode }) {
         pid={pid}
       />
     );
+  } else if (isSpec) {
+    content = <PlayerSpectate phase={phase} question={question} />;
+  } else if (isRestricted) {
+    content = (
+      <PlayerReplayBlocked
+        roomCode={roomCode}
+        pid={pid}
+        onJoined={handleJoined}
+        onUnlocked={() => setRepeatOverride(true)}
+      />
+    );
+  } else if (!joined) {
+    content = <PlayerJoin roomCode={roomCode} pid={pid} onJoined={handleJoined} />;
+  } else if (phase === 'lobby') {
+    content = <PlayerWait me={me} title="🎮 IN LOBBY" message="You're connected! Waiting for the host to start the game…" type="lobby" />;
   } else if ((phase === 'question' || phase === 'locked') && isEliminated) {
     content = (
       <PlayerWait

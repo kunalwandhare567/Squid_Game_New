@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const CIRCUMFERENCE = 2 * Math.PI * 44; // r=44
 
-export default function TimerRing({ totalSeconds = 10, resetKey, startTimeMs }) {
+export default function TimerRing({ totalSeconds = 15, resetKey, startTimeMs }) {
   const [secsLeft, setSecsLeft] = useState(totalSeconds);
   const startRef = useRef(startTimeMs || Date.now());
   const rafRef   = useRef(null);

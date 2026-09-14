@@ -118,24 +118,24 @@ export default function HostQuestion({
     }
   }, [state.answers, aliveCount]);
 
-  // Main 10-Second Timeline: 0-5s Solid Green, 5-10s Fast Alert & Red Blink, 10s Hard Stop
+  // Main 15-Second Timeline: 0-10s Solid Green, 10-15s Fast Alert & Red Blink, 15s Hard Stop
   useEffect(() => {
-    // Start tempo beat accelerating across 10 seconds
-    audio.startBeat(10000);
+    // Start tempo beat accelerating across 15 seconds
+    audio.startBeat(GREEN_DURATION_SECS * 1000);
 
-    // 1. At 5 Seconds: Trigger Fast Alert & Blinking window
+    // 1. At 10 Seconds: Trigger Fast Alert & Blinking window
     const alertTimer = setTimeout(() => {
       if (!armedRef.current && !lockedRef.current) {
         arm();
       }
-    }, 5000);
+    }, 10000);
 
-    // 2. At Exactly 10 Seconds: Hard Stop!
+    // 2. At Exactly 15 Seconds: Hard Stop!
     const hardStopTimer = setTimeout(() => {
       if (!lockedRef.current) {
         dropReal();
       }
-    }, 10000);
+    }, 15000);
 
     return () => {
       clearTimeout(alertTimer);

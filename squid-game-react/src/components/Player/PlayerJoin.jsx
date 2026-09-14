@@ -3,6 +3,7 @@ import { supabase } from '../../supabase';
 import { MAX_PLAYERS } from '../../utils/ruleEngine';
 import DollSvg from '../Shared/DollSvg';
 import { ShieldAlert, Lock, Eye, Calendar, Award } from 'lucide-react';
+import { isDeviceRestricted, clearDeviceRestriction, REPLAY_PASSKEY } from '../../utils/replayRestrictions';
 
 const EMOJIS = ['🦊','🐼','🦉','🐙','🐝','🦄','🐢','🦁','🐧','🦋','🐸','🦕','🐳','🦥','🐡','🦩','🐨','🦔','🐯','🦦','🐬','🦚','🐞','🦇'];
 
@@ -18,14 +19,10 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
   const [passkey,          setPasskey]          = useState('');
   const [passkeyError,     setPasskeyError]     = useState('');
 
-  const REPLAY_PASSKEY = '0507';
-
   function handleUnlockPasskey(e) {
     e?.preventDefault();
     if (passkey.trim() === REPLAY_PASSKEY) {
-      try {
-        localStorage.removeItem('arena_completed_date');
-      } catch (err) {}
+      clearDeviceRestriction();
       setRepeatOverride(true);
       setShowPasskeyInput(false);
       setPasskeyError('');
@@ -34,16 +31,9 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
     }
   }
 
-  // ── 1. Startup Check: Read arena_completed_date from localStorage ─────
+  // ── 1. Startup Check: Read completion state reliably ─────
   const isRepeatPlayer = useMemo(() => {
-    try {
-      const completedDate = localStorage.getItem('arena_completed_date');
-      if (!completedDate) return false;
-      const todayStr = new Date().toISOString().slice(0, 10);
-      return completedDate === todayStr;
-    } catch (e) {
-      return false;
-    }
+    return isDeviceRestricted();
   }, []);
 
   async function handleSpectateOnly() {

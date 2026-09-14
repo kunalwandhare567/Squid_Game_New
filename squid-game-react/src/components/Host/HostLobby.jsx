@@ -23,7 +23,7 @@ const RULES = [
   { num: '03', icon: Award,        title: '2ND WRONG: -3 PTS',   desc: 'Two consecutive wrong answers incur an extra -3 pts penalty', color: '#ff7b42' },
   { num: '04', icon: Skull,        title: '3 STRIKES OUT',       desc: '3 consecutive wrong answers = permanent arena elimination', color: '#ff2d78' },
   { num: '05', icon: Zap,          title: 'SPEED TIEBREAKER',    desc: 'Faster response speed breaks score ties to decide your rank', color: '#3aa0ff' },
-  { num: '06', icon: Radio,        title: 'RED LIGHT LOCK',      desc: '10s timer per round; answers lock immediately on Red Light', color: '#a78bfa' },
+  { num: '06', icon: Radio,        title: 'RED LIGHT LOCK',      desc: '15s timer per round (10s green + 5s blink); answers lock on Red Light', color: '#a78bfa' },
 ];
 
 export default function HostLobby({ roomCode, joinURL, onStart }) {

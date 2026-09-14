@@ -3,7 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { MIN_PLAYERS, MAX_PLAYERS } from '../../utils/ruleEngine';
 import QRDisplay from '../Shared/QRDisplay';
 import {
-  Zap, Flame, ShieldCheck, Sparkles, Bot, Play, Users,
+  Zap, Flame, ShieldCheck, Sparkles, Play, Users,
   CheckCircle2, Radio, QrCode, Smartphone, Brain, Award,
   Skull, ArrowRight, Shield, Swords
 } from 'lucide-react';
@@ -18,15 +18,15 @@ const QUOTES = [
 ];
 
 const RULES = [
-  { num: '01', icon: Zap,         title: 'ANSWER FAST',    desc: 'Faster correct answers earn up to +3 speed bonus points', color: '#57ffb0' },
-  { num: '02', icon: Flame,       title: 'RED LIGHT',      desc: 'Choices lock immediately when the red light drops',       color: '#ff2d78' },
-  { num: '03', icon: Brain,       title: 'THINK SMART',    desc: 'Questions test AI, engineering, and logic intuition',     color: '#3aa0ff' },
-  { num: '04', icon: Award,       title: 'EARN POINTS',    desc: 'Every correct answer builds your score toward champion',  color: '#ffd257' },
-  { num: '05', icon: ShieldCheck, title: 'USE POWERS',     desc: 'Activate 🛡 Shield protection & ✕2 Double Down score',    color: '#a78bfa' },
-  { num: '06', icon: Skull,       title: '3 STRIKES CUT',  desc: '3 consecutive wrong answers = permanent elimination from arena', color: '#f43f5e' },
+  { num: '01', icon: CheckCircle2, title: 'CORRECT: +2 PTS',    desc: 'Each correct answer earns +2 points toward champion rank', color: '#57ffb0' },
+  { num: '02', icon: Flame,        title: '1ST WRONG: -2 PTS',   desc: 'First incorrect answer deducts -2 points from your total', color: '#ffd257' },
+  { num: '03', icon: Award,        title: '2ND WRONG: -3 PTS',   desc: 'Two consecutive wrong answers incur an extra -3 pts penalty', color: '#ff7b42' },
+  { num: '04', icon: Skull,        title: '3 STRIKES OUT',       desc: '3 consecutive wrong answers = permanent arena elimination', color: '#ff2d78' },
+  { num: '05', icon: Zap,          title: 'SPEED TIEBREAKER',    desc: 'Faster response speed breaks score ties to decide your rank', color: '#3aa0ff' },
+  { num: '06', icon: Radio,        title: 'RED LIGHT LOCK',      desc: '10s timer per round; answers lock immediately on Red Light', color: '#a78bfa' },
 ];
 
-export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemoveBot, botCount }) {
+export default function HostLobby({ roomCode, joinURL, onStart }) {
   const { state } = useGame();
   const videoRef = useRef(null);
   const pauseTimerRef = useRef(null);
@@ -285,7 +285,7 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
         {/* GAME RULES: 6 COMPACT CARDS */}
         <div className="lobby-rules-section">
           <div className="rules-section-title">
-            <Brain size={18} color="#ffd257" />
+            <Brain size={22} color="#ffd257" />
             <span>GAME RULES & ARENA PROTOCOLS</span>
           </div>
 
@@ -293,10 +293,9 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
             {RULES.map((r) => {
               const IconComponent = r.icon;
               return (
-                <div key={r.num} className="rule-box-card" style={{ borderLeftColor: r.color }}>
+                <div key={r.title} className="rule-box-card" style={{ borderLeftColor: r.color }}>
                   <div className="rule-top-line">
-                    <span className="rule-num" style={{ color: r.color }}>{r.num}</span>
-                    <IconComponent size={16} color={r.color} />
+                    <IconComponent size={18} color={r.color} />
                     <span className="rule-heading">{r.title}</span>
                   </div>
                   <p className="rule-description">{r.desc}</p>
@@ -308,31 +307,25 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
 
         {/* BOTTOM CONTROLS & START BUTTON */}
         <div className="lobby-actions-sidebar">
-          {/* Practice Bots Widget */}
-          <div className="practice-mode-card">
-            <div className="practice-head">
-              <Bot size={16} color="#7fa295" />
-              <span>PRACTICE BOTS</span>
+          <div className="launch-control-header">
+            <div className="launch-title-left">
+              <Swords size={20} color={canStart ? '#57ffb0' : '#ffd257'} />
+              <span className="launch-control-title">ARENA LAUNCH</span>
             </div>
-            <p className="practice-sub">Add test AI bots to test the arena</p>
-            <div className="bot-stepper-row">
-              <button
-                className="step-btn"
-                onClick={onRemoveBot}
-                disabled={botCount === 0}
-                title="Remove bot"
-              >
-                −
-              </button>
-              <span className="bot-count-display">{botCount}</span>
-              <button
-                className="step-btn"
-                onClick={onAddBot}
-                title="Add bot"
-              >
-                +
-              </button>
+          </div>
+
+          <div className="launch-status-card" style={{ borderLeftColor: canStart ? '#57ffb0' : '#ffd257' }}>
+            <div className="launch-status-top">
+              <span className="launch-status-lbl">ARENA STATUS:</span>
+              <strong className={`launch-status-val ${canStart ? 'val-ready' : 'val-waiting'}`}>
+                {canStart ? '⚡ READY TO LAUNCH' : `NEED ${Math.max(0, MIN_PLAYERS - totalCount)} MORE CONTESTANT${(MIN_PLAYERS - totalCount) === 1 ? '' : 'S'}`}
+              </strong>
             </div>
+            <p className="launch-status-desc">
+              {canStart
+                ? `All systems verified. Host can start Round 01 with ${totalCount} contestants.`
+                : `Minimum ${MIN_PLAYERS} contestants required to commence arena match (currently ${totalCount}/${MAX_PLAYERS} joined).`}
+            </p>
           </div>
 
           {/* Primary Action Button */}
@@ -343,8 +336,9 @@ export default function HostLobby({ roomCode, joinURL, onStart, onAddBot, onRemo
           >
             {canStart ? (
               <>
-                <Play size={20} className="start-icon" />
-                <span>⚡ START GAME · {totalCount} PLAYING</span>
+                <span className="btn-glow-shimmer" />
+                <Play size={18} className="start-icon" />
+                <span>START ARENA · {totalCount} PLAYING</span>
               </>
             ) : (
               <span>WAITING FOR PLAYERS ({totalCount}/{MIN_PLAYERS})…</span>

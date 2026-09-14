@@ -1038,189 +1038,295 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
 /* ── 3. Bottom Section: Rules & Start Action ────────────────────────── */
 .lobby-bottom-deck {
   display: grid;
-  grid-template-columns: 1.8fr 1fr;
+  grid-template-columns: 2.45fr 1fr;
   gap: 24px;
   align-items: stretch;
   z-index: 2;
 }
 
 .lobby-rules-section {
-  background: rgba(10, 24, 19, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  border-radius: 20px;
-  padding: 16px 20px;
+  background: rgba(10, 24, 19, 0.88);
+  border: 1.5px solid rgba(87, 255, 176, 0.22);
+  backdrop-filter: blur(16px);
+  border-radius: 22px;
+  padding: 18px 22px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), 0 0 20px rgba(87, 255, 176, 0.08);
 }
 
 .rules-section-title {
+  height: 38px;
+  min-height: 38px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 10px;
+  font-size: 14px;
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.8px;
   color: #ffffff;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .rules-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .rule-box-card {
-  background: rgba(14, 32, 26, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-left-width: 3px;
+  background: rgba(14, 34, 28, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 4px;
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rule-box-card:hover {
+  transform: translateY(-2px);
+  background: rgba(18, 44, 36, 0.85);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
 .rule-top-line {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .rule-num {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
+  letter-spacing: 0.5px;
 }
 
 .rule-heading {
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 12.5px;
+  font-weight: 900;
   color: #ffffff;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
 }
 
 .rule-description {
   margin: 0;
-  font-size: 11px;
-  color: var(--c-sub);
-  line-height: 1.35;
+  font-size: 11.5px;
+  color: #b0d2c7;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
+/* ── Launch Control Sidebar ────────────────────────────────────────── */
 .lobby-actions-sidebar {
+  background: rgba(10, 24, 19, 0.88);
+  border: 1.5px solid rgba(87, 255, 176, 0.22);
+  backdrop-filter: blur(16px);
+  border-radius: 22px;
+  padding: 18px 22px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 14px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), 0 0 20px rgba(87, 255, 176, 0.08);
 }
 
-.practice-mode-card {
-  background: rgba(10, 24, 19, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  border-radius: 16px;
-  padding: 14px 18px;
+.launch-control-header {
+  height: 38px;
+  min-height: 38px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.practice-head {
+.launch-title-left {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  color: #a0c4b8;
 }
 
-.practice-sub {
-  margin: 0;
+.launch-control-title {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1.8px;
+  color: #ffffff;
+}
+
+.launch-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.launch-indicator-pill.pill-ready {
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  color: #00e676;
+}
+
+.launch-indicator-pill.pill-waiting {
+  background: rgba(255, 210, 87, 0.1);
+  border: 1px solid rgba(255, 210, 87, 0.3);
+  color: #ffd257;
+}
+
+.launch-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.pill-ready .launch-indicator-dot {
+  background: #00e676;
+  box-shadow: 0 0 8px #00e676;
+  animation: dotPulseReady 1.5s infinite ease-in-out;
+}
+
+.pill-waiting .launch-indicator-dot {
+  background: #ffd257;
+  box-shadow: 0 0 8px #ffd257;
+  animation: dotPulseWait 2s infinite ease-in-out;
+}
+
+@keyframes dotPulseReady {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+@keyframes dotPulseWait {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.launch-status-card {
+  background: rgba(14, 34, 28, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  justify-content: center;
+}
+
+.launch-status-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.launch-status-lbl {
   font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
   color: var(--c-sub);
 }
 
-.bot-stepper-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 6px;
-}
-
-.step-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  font-size: 18px;
+.launch-status-val {
+  font-size: 12px;
   font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
+  letter-spacing: 0.5px;
 }
 
-.step-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #ffffff;
+.launch-status-val.val-ready {
+  color: #57ffb0;
+  text-shadow: 0 0 8px rgba(87, 255, 176, 0.4);
 }
 
-.step-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+.launch-status-val.val-waiting {
+  color: #ffd257;
 }
 
-.bot-count-display {
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--c-gold);
-  min-width: 24px;
-  text-align: center;
+.launch-status-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: #b0d2c7;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
+/* Compact, Ultra-Sleek Action Button with Unique Light Shimmer Animation */
 .btn-lobby-start {
   width: 100%;
-  padding: 18px 24px;
-  border-radius: 16px;
-  font-size: 17px;
+  height: 52px;
+  min-height: 52px;
+  max-height: 52px;
+  padding: 0 20px;
+  border-radius: 14px;
+  font-size: 14.5px;
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  transition: transform 0.15s, box-shadow 0.15s;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .btn-ready {
-  background: linear-gradient(135deg, #00e676, #00b0ff);
+  background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
   color: #06120f;
-  box-shadow: 0 10px 30px rgba(0, 230, 118, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
-  animation: start-pulse 2s infinite ease-in-out;
+  box-shadow: 0 4px 20px rgba(0, 230, 118, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
+  animation: startButtonPulse 2.2s infinite ease-in-out;
 }
 
 .btn-ready:hover {
-  transform: scale(1.02);
-  box-shadow: 0 14px 40px rgba(0, 230, 118, 0.65);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(0, 230, 118, 0.65), 0 0 25px rgba(0, 176, 255, 0.5);
+  filter: brightness(1.08);
 }
 
-@keyframes start-pulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 10px 30px rgba(0, 230, 118, 0.4); }
-  50%      { transform: scale(1.02); box-shadow: 0 14px 40px rgba(0, 230, 118, 0.7); }
+.btn-glow-shimmer {
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: skewX(-25deg);
+  animation: shimmerSweep 2.8s infinite linear;
+  pointer-events: none;
+}
+
+@keyframes shimmerSweep {
+  0% { left: -120%; }
+  35% { left: 160%; }
+  100% { left: 160%; }
+}
+
+@keyframes startButtonPulse {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 230, 118, 0.4), 0 0 15px rgba(0, 176, 255, 0.25);
+  }
+  50% {
+    box-shadow: 0 6px 30px rgba(0, 230, 118, 0.7), 0 0 25px rgba(0, 176, 255, 0.5);
+  }
 }
 
 .btn-waiting {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.5);
   cursor: not-allowed;
   box-shadow: none;
 }

@@ -495,9 +495,6 @@ function HostController({ roomCode }) {
             roomCode={roomCode}
             joinURL={joinURL}
             onStart={startGame}
-            onAddBot={addBot}
-            onRemoveBot={removeBot}
-            botCount={botCount}
           />
         )}
 

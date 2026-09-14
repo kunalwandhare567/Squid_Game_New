@@ -23,8 +23,9 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
   const isTop3   = myRank <= 3;
   const isSurvivor = Boolean(me?.alive !== false);
 
-  const strikeCount  = Number(me?.consecutiveWrong ?? me?.consecutive_wrong ?? 0);
-  const finalScore   = Number(me?.score || 0);
+  const totalStrikes       = Number(me?.totalStrikes ?? me?.total_strikes ?? me?.strikes ?? 0);
+  const consecutiveStrikes = Number(me?.consecutiveWrong ?? me?.consecutive_wrong ?? 0);
+  const finalScore         = Number(me?.score || 0);
 
   // Tracked rounds played (default to totalRounds for survivors, or capped for eliminated)
   const roundsPlayed = Number(
@@ -36,7 +37,7 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
   const correctCount = typeof rawCorrect === 'number'
     ? rawCorrect
     : Math.min(
-        strikeCount >= 3 ? Math.max(0, roundsPlayed - 3) : roundsPlayed,
+        consecutiveStrikes >= 3 ? Math.max(0, roundsPlayed - 3) : roundsPlayed,
         Math.max(0, Math.floor(finalScore / 2))
       );
 
@@ -195,7 +196,7 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
 
           <div className="stat-metric-card">
             <span className="stat-icon">🔥</span>
-            <div className="stat-val">{strikeCount}</div>
+            <div className="stat-val">{totalStrikes}</div>
             <div className="stat-lbl">STRIKES</div>
           </div>
         </section>

@@ -100,8 +100,11 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
     );
 
     const prevConsec = Number(player.consecutiveWrong ?? player.consecutive_wrong ?? 0);
+    const prevTotalStrikes = Number(player.totalStrikes ?? player.total_strikes ?? player.strikes ?? 0);
+
     let newConsec = 0;
     let points = 0;
+    const newTotalStrikes = correct ? prevTotalStrikes : prevTotalStrikes + 1;
 
     if (correct) {
       newConsec = 0;
@@ -127,6 +130,9 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
 
     playerStates[player.id].consecutiveWrong  = newConsec;
     playerStates[player.id].consecutive_wrong = newConsec;
+    playerStates[player.id].totalStrikes      = newTotalStrikes;
+    playerStates[player.id].total_strikes     = newTotalStrikes;
+    playerStates[player.id].strikes           = newTotalStrikes; // Supabase 'strikes' column stores cumulative total strikes
     playerStates[player.id].score             = newScore;
     playerStates[player.id].correctCount      = newCorrect;
     playerStates[player.id].correct_count     = newCorrect;
@@ -140,6 +146,7 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
       ddUsed: false,
       shieldActive: false,
       consecutiveWrong: newConsec,
+      totalStrikes:     newTotalStrikes,
       newScore,
       correctCount:     newCorrect,
       roundsPlayed:     newRounds,
@@ -213,6 +220,8 @@ export function rankPlayers(players) {
     .map(p => ({
       ...p,
       score: Number(p.score) || 0,
+      totalStrikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
+      strikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
       consecutiveWrong: Number(p.consecutiveWrong ?? p.consecutive_wrong ?? 0),
       joinOrder: Number(p.joinOrder ?? p.join_order ?? 99),
       alive: !!p.alive

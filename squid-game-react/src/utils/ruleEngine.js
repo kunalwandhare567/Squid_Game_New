@@ -122,8 +122,12 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
 
     const prevCorrect  = Number(player.totalCorrect ?? player.total_correct ?? player.correctCount ?? player.correct_count ?? 0);
     const newCorrect   = correct ? prevCorrect + 1 : prevCorrect;
+    const roundSpeedMs = (speedMs != null && !isNaN(speedMs)) ? speedMs : 10000;
+    const prevTotalSpeedMs = Number(player.totalSpeedMs ?? player.total_speed_ms ?? 0);
+    const newTotalSpeedMs  = prevTotalSpeedMs + roundSpeedMs;
     const prevRounds   = Number(player.roundsPlayed ?? player.rounds_played ?? 0);
     const newRounds    = prevRounds + 1;
+    const newAvgSpeedMs = Math.round(newTotalSpeedMs / newRounds);
 
     playerStates[player.id].consecutiveWrong  = newConsec;
     playerStates[player.id].consecutive_wrong = newConsec;
@@ -137,11 +141,19 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
     playerStates[player.id].correct_count     = newCorrect;
     playerStates[player.id].roundsPlayed      = newRounds;
     playerStates[player.id].rounds_played     = newRounds;
+    playerStates[player.id].lastSpeedMs       = speedMs;
+    playerStates[player.id].totalSpeedMs      = newTotalSpeedMs;
+    playerStates[player.id].total_speed_ms    = newTotalSpeedMs;
+    playerStates[player.id].avgSpeedMs        = newAvgSpeedMs;
+    playerStates[player.id].avg_speed_ms      = newAvgSpeedMs;
 
     results[player.id] = {
       correct,
       points,
       speedMs,
+      lastSpeedMs:      speedMs,
+      totalSpeedMs:     newTotalSpeedMs,
+      avgSpeedMs:       newAvgSpeedMs,
       ddUsed: false,
       shieldActive: false,
       consecutiveWrong: newConsec,
@@ -189,8 +201,9 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
  * Authoritative leaderboard sorting:
  * 1. Alive survivors always rank higher than eliminated players
  * 2. Higher total score
- * 3. Lowest consecutive wrong answers (tiebreaker)
- * 4. Earliest join order (tiebreaker)
+ * 3. Fastest cumulative response speed (tiebreaker)
+ * 4. Lowest consecutive wrong answers (tiebreaker)
+ * 5. Earliest join order (tiebreaker)
  */
 export function rankPlayers(players) {
   const list = (Array.isArray(players) ? players : Object.values(players || {}))
@@ -198,6 +211,9 @@ export function rankPlayers(players) {
     .map(p => ({
       ...p,
       score: Number(p.score) || 0,
+      totalSpeedMs: Number(p.totalSpeedMs ?? p.total_speed_ms ?? 999999),
+      avgSpeedMs: Number(p.avgSpeedMs ?? p.avg_speed_ms ?? 10000),
+      lastSpeedMs: p.lastSpeedMs != null ? Number(p.lastSpeedMs) : null,
       totalStrikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
       strikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
       totalCorrect: Number(p.totalCorrect ?? p.total_correct ?? p.correctCount ?? p.correct_count ?? 0),
@@ -210,6 +226,7 @@ export function rankPlayers(players) {
   return list.sort((a, b) => {
     if (a.alive !== b.alive) return a.alive ? -1 : 1;
     if (b.score !== a.score) return b.score - a.score;
+    if (a.totalSpeedMs !== b.totalSpeedMs) return a.totalSpeedMs - b.totalSpeedMs;
     if (a.consecutiveWrong !== b.consecutiveWrong) return a.consecutiveWrong - b.consecutiveWrong;
     return a.joinOrder - b.joinOrder;
   });

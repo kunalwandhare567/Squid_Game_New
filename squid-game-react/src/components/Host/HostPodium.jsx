@@ -117,7 +117,12 @@ export default function HostPodium({ players, onRestart }) {
                   <span className="pod-avatar">{second.emoji}</span>
                 </div>
                 <div className="pod-p-name">{second.name}</div>
-                <div className="pod-p-score">{second.score} PTS</div>
+                <div className="pod-p-score">
+                  {second.score} PTS
+                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                    ⚡ {second.avgSpeedMs ? (second.avgSpeedMs / 1000).toFixed(1) : '--'}s avg
+                  </span>
+                </div>
                 <span className={`pod-p-status ${second.alive ? 'status-safe' : 'status-elim'}`}>
                   {second.alive ? '✓ SURVIVED' : '✕ ELIMINATED'}
                 </span>
@@ -141,7 +146,12 @@ export default function HostPodium({ players, onRestart }) {
                   <span className="pod-avatar gold-avatar">{first.emoji}</span>
                 </div>
                 <div className="pod-p-name champion-name">{first.name}</div>
-                <div className="pod-p-score champion-score">{first.score} PTS</div>
+                <div className="pod-p-score champion-score">
+                  {first.score} PTS
+                  <span style={{ fontSize: '11px', color: '#ffd257', display: 'block', marginTop: '2px', fontWeight: 600 }}>
+                    ⚡ {first.avgSpeedMs ? (first.avgSpeedMs / 1000).toFixed(1) : '--'}s avg
+                  </span>
+                </div>
                 <span className="pod-p-status status-champion">
                   {first.alive ? '👑 YOU SURVIVED' : '🏆 TOP SCORER'}
                 </span>
@@ -162,7 +172,12 @@ export default function HostPodium({ players, onRestart }) {
                   <span className="pod-avatar">{third.emoji}</span>
                 </div>
                 <div className="pod-p-name">{third.name}</div>
-                <div className="pod-p-score">{third.score} PTS</div>
+                <div className="pod-p-score">
+                  {third.score} PTS
+                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                    ⚡ {third.avgSpeedMs ? (third.avgSpeedMs / 1000).toFixed(1) : '--'}s avg
+                  </span>
+                </div>
                 <span className={`pod-p-status ${third.alive ? 'status-safe' : 'status-elim'}`}>
                   {third.alive ? '✓ SURVIVED' : '✕ ELIMINATED'}
                 </span>
@@ -229,6 +244,7 @@ export default function HostPodium({ players, onRestart }) {
                   <th className="th-rank">RANK</th>
                   <th className="th-player">PLAYER</th>
                   <th className="th-points">POINTS</th>
+                  <th className="th-speed" style={{ textAlign: 'center' }}>AVG TIME</th>
                   <th className="th-status">STATUS</th>
                 </tr>
               </thead>
@@ -239,6 +255,7 @@ export default function HostPodium({ players, onRestart }) {
                   const isTop2  = rankNum === 2;
                   const isTop3  = rankNum === 3;
                   const strikes = p.consecutiveWrong ?? p.consecutive_wrong ?? 0;
+                  const avgSpeedSec = p.avgSpeedMs ? (p.avgSpeedMs / 1000).toFixed(1) : '--';
 
                   return (
                     <tr
@@ -268,6 +285,12 @@ export default function HostPodium({ players, onRestart }) {
 
                       <td className="td-points">
                         <span className="p-pts-badge">{p.score || 0} pts</span>
+                      </td>
+
+                      <td className="td-speed" style={{ textAlign: 'center' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '13px', color: '#38bdf8', fontWeight: 700 }}>
+                          ⚡ {avgSpeedSec}s
+                        </span>
                       </td>
 
                       <td className="td-status">

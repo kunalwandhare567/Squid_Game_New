@@ -300,6 +300,10 @@ export default function HostReveal({
                     const isTop1 = rankNum === 1;
                     const isTop2 = rankNum === 2;
                     const isTop3 = rankNum === 3;
+                    const speedMs = res?.speedMs ?? p.lastSpeedMs;
+                    const speedTxt = (speedMs != null && !isNaN(speedMs)) ? `${(speedMs / 1000).toFixed(1)}s` : '--';
+                    const avgSpeedMs = res?.avgSpeedMs ?? p.avgSpeedMs;
+                    const avgSpeedTxt = (avgSpeedMs != null && !isNaN(avgSpeedMs)) ? `${(avgSpeedMs / 1000).toFixed(1)}s` : '--';
 
                     return (
                       <div
@@ -315,10 +319,17 @@ export default function HostReveal({
                           {p.bot && <span className="lb-bot-badge">BOT</span>}
                         </div>
                         <div className="surv-player-score-col">
-                          <span className="surv-score-val">{p.score || 0} pts</span>
-                          <span className={`surv-delta-txt ${ptsDelta > 0 ? 'txt-plus' : 'txt-zero'}`}>
-                            {ptsDelta > 0 ? `+${ptsDelta}` : '+0'}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                            <span className="surv-score-val">{p.score || 0} pts</span>
+                            <span className={`surv-delta-txt ${ptsDelta > 0 ? 'txt-plus' : 'txt-zero'}`}>
+                              {ptsDelta > 0 ? `+${ptsDelta}` : '+0'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#38bdf8', fontWeight: 600, marginTop: '2px' }}>
+                            <span>⚡ {speedTxt}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
+                            <span style={{ color: '#94a3b8', fontSize: '10px' }}>avg {avgSpeedTxt}</span>
+                          </div>
                         </div>
                         <div className="surv-status-col">
                           {strikes >= 2 ? (

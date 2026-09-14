@@ -26,6 +26,8 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
   const totalStrikes       = Number(me?.totalStrikes ?? me?.total_strikes ?? me?.strikes ?? 0);
   const consecutiveStrikes = Number(me?.consecutiveWrong ?? me?.consecutive_wrong ?? 0);
   const finalScore         = Number(me?.score || 0);
+  const avgSpeedMs         = Number(me?.avgSpeedMs ?? me?.avg_speed_ms ?? 0);
+  const avgSpeedSec        = avgSpeedMs > 0 ? (avgSpeedMs / 1000).toFixed(1) : '--';
 
   // Tracked rounds played (default to totalRounds for survivors, or capped for eliminated)
   const roundsPlayed = Number(
@@ -180,7 +182,7 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
           <p className="msg-card-body">{tierConfig.msgBody}</p>
         </section>
 
-        {/* ── 7. PERFORMANCE STATS (3-COL) ── */}
+        {/* ── 7. PERFORMANCE STATS (4-COL) ── */}
         <section className="scorecard-stats-grid" aria-label="Performance summary">
           <div className="stat-metric-card">
             <span className="stat-icon">🎮</span>
@@ -198,6 +200,12 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
             <span className="stat-icon">🔥</span>
             <div className="stat-val">{totalStrikes}</div>
             <div className="stat-lbl">STRIKES</div>
+          </div>
+
+          <div className="stat-metric-card">
+            <span className="stat-icon">⚡</span>
+            <div className="stat-val">{avgSpeedSec}s</div>
+            <div className="stat-lbl">AVG TIME</div>
           </div>
         </section>
 

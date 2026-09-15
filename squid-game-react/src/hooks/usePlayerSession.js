@@ -4,9 +4,14 @@ import { generatePlayerId } from '../utils/ruleEngine';
 export function usePlayerSession() {
   const [pid] = useState(() => {
     try {
-      const stored = sessionStorage.getItem('squid_pid');
-      if (stored) return stored;
+      let stored = localStorage.getItem('squid_pid') || sessionStorage.getItem('squid_pid');
+      if (stored) {
+        localStorage.setItem('squid_pid', stored);
+        sessionStorage.setItem('squid_pid', stored);
+        return stored;
+      }
       const newId = generatePlayerId();
+      localStorage.setItem('squid_pid', newId);
       sessionStorage.setItem('squid_pid', newId);
       return newId;
     } catch (e) {

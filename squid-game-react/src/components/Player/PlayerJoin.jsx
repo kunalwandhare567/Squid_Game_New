@@ -40,8 +40,8 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
     setJoining(true);
     setError('');
     try {
-      const storedName = sessionStorage.getItem('sq_player_name') || 'Spectator';
-      const storedEmoji = sessionStorage.getItem('sq_player_emoji') || '👁️';
+      const storedName = localStorage.getItem('sq_player_name') || sessionStorage.getItem('sq_player_name') || 'Spectator';
+      const storedEmoji = localStorage.getItem('sq_player_emoji') || sessionStorage.getItem('sq_player_emoji') || '👁️';
 
       const playerRecord = {
         room_code: roomCode,
@@ -79,6 +79,7 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
     if (!trimmed)          { setError('Please enter your name!'); return; }
     if (trimmed.length > 14){ setError('Max 14 characters.'); return; }
 
+    if (joining) return;
     setJoining(true);
     setError('');
 
@@ -96,11 +97,33 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
         return;
       }
 
-      // 2. Count existing real players
+      // 2. Check if this player already joined this room
       const { data: playersList } = await supabase
         .from('players')
-        .select('player_id, bot, spectator')
+        .select('*')
         .eq('room_code', roomCode);
+
+      const existingPlayer = (playersList || []).find(p => p.player_id === pid);
+      if (existingPlayer) {
+        try {
+          sessionStorage.setItem(`sq_joined_${roomCode}`, 'true');
+          localStorage.setItem(`sq_joined_${roomCode}`, 'true');
+          sessionStorage.setItem('sq_player_name', existingPlayer.name || trimmed);
+          localStorage.setItem('sq_player_name', existingPlayer.name || trimmed);
+          sessionStorage.setItem('sq_player_emoji', existingPlayer.emoji || emoji);
+          localStorage.setItem('sq_player_emoji', existingPlayer.emoji || emoji);
+        } catch (e) {}
+
+        onJoined({
+          isSpectator: Boolean(existingPlayer.spectator),
+          playerRecord: {
+            id: pid,
+            ...existingPlayer,
+            consecutiveWrong: existingPlayer.consecutive_wrong || 0,
+          },
+        });
+        return;
+      }
 
       const realCount = (playersList || []).filter(p => !p.bot && !p.spectator).length;
       const isSpectator = realCount >= MAX_PLAYERS || !['lobby'].includes(roomData.phase);
@@ -133,8 +156,11 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
 
       try {
         sessionStorage.setItem(`sq_joined_${roomCode}`, 'true');
+        localStorage.setItem(`sq_joined_${roomCode}`, 'true');
         sessionStorage.setItem('sq_player_name', trimmed);
+        localStorage.setItem('sq_player_name', trimmed);
         sessionStorage.setItem('sq_player_emoji', emoji);
+        localStorage.setItem('sq_player_emoji', emoji);
       } catch (e) {}
 
       onJoined({

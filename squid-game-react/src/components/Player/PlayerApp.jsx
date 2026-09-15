@@ -34,7 +34,10 @@ function PlayerController({ roomCode }) {
   const [joined, setJoined] = useState(() => {
     try {
       if (isDeviceRestricted()) return false;
-      return sessionStorage.getItem(`sq_joined_${roomCode}`) === 'true';
+      return (
+        sessionStorage.getItem(`sq_joined_${roomCode}`) === 'true' ||
+        localStorage.getItem(`sq_joined_${roomCode}`) === 'true'
+      );
     } catch (e) {
       return false;
     }
@@ -59,6 +62,7 @@ function PlayerController({ roomCode }) {
     if (isRestricted && !isSpec && phase !== 'gameover') {
       try {
         sessionStorage.removeItem(`sq_joined_${roomCode}`);
+        localStorage.removeItem(`sq_joined_${roomCode}`);
       } catch (e) {}
       setJoined(false);
       return;
@@ -69,6 +73,7 @@ function PlayerController({ roomCode }) {
       setIsSpec(Boolean(me.spectator));
       try {
         sessionStorage.setItem(`sq_joined_${roomCode}`, 'true');
+        localStorage.setItem(`sq_joined_${roomCode}`, 'true');
       } catch (e) {}
     }
   }, [me, joined, roomCode, isRestricted, isSpec, phase]);
@@ -127,6 +132,7 @@ function PlayerController({ roomCode }) {
     if (phase === 'terminated') {
       try {
         sessionStorage.removeItem(`sq_joined_${roomCode}`);
+        localStorage.removeItem(`sq_joined_${roomCode}`);
       } catch (e) {}
 
       const timer = setTimeout(() => {

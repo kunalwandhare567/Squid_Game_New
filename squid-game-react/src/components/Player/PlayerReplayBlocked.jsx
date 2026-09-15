@@ -26,8 +26,8 @@ export default function PlayerReplayBlocked({ roomCode, pid, onJoined, onUnlocke
     setJoining(true);
     setPasskeyError('');
     try {
-      const storedName = sessionStorage.getItem('sq_player_name') || 'Spectator';
-      const storedEmoji = sessionStorage.getItem('sq_player_emoji') || '👁️';
+      const storedName = localStorage.getItem('sq_player_name') || sessionStorage.getItem('sq_player_name') || 'Spectator';
+      const storedEmoji = localStorage.getItem('sq_player_emoji') || sessionStorage.getItem('sq_player_emoji') || '👁️';
 
       const playerRecord = {
         room_code: roomCode,

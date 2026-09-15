@@ -118,8 +118,8 @@ export default function HostPodium({ players, onRestart }) {
                 </div>
                 <div className="pod-p-name">{second.name}</div>
                 <div className="pod-p-score">
-                  {second.score} PTS
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                  <span className="pts-main-num">{second.score} PTS</span>
+                  <span className="pts-speed-sub">
                     ⚡ {second.avgSpeedMs ? `${(second.avgSpeedMs / 1000).toFixed(2)}s avg (${second.avgSpeedMs}ms)` : '--'}
                   </span>
                 </div>
@@ -147,8 +147,8 @@ export default function HostPodium({ players, onRestart }) {
                 </div>
                 <div className="pod-p-name champion-name">{first.name}</div>
                 <div className="pod-p-score champion-score">
-                  {first.score} PTS
-                  <span style={{ fontSize: '11px', color: '#ffd257', display: 'block', marginTop: '2px', fontWeight: 600 }}>
+                  <span className="pts-main-num champion-pts">{first.score} PTS</span>
+                  <span className="pts-speed-sub gold">
                     ⚡ {first.avgSpeedMs ? `${(first.avgSpeedMs / 1000).toFixed(2)}s avg (${first.avgSpeedMs}ms)` : '--'}
                   </span>
                 </div>
@@ -173,8 +173,8 @@ export default function HostPodium({ players, onRestart }) {
                 </div>
                 <div className="pod-p-name">{third.name}</div>
                 <div className="pod-p-score">
-                  {third.score} PTS
-                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                  <span className="pts-main-num">{third.score} PTS</span>
+                  <span className="pts-speed-sub">
                     ⚡ {third.avgSpeedMs ? `${(third.avgSpeedMs / 1000).toFixed(2)}s avg (${third.avgSpeedMs}ms)` : '--'}
                   </span>
                 </div>

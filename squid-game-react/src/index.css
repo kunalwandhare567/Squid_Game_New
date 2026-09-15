@@ -3473,11 +3473,52 @@ h2 { font-size: clamp(20px, 3.5vw, 34px); font-weight: 900; line-height: 1.12; }
   font-size: 14px;
   font-weight: 800;
   color: var(--c-gold);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: 2px 0 4px;
 }
 
 .champion-score {
   font-size: 17px;
   font-weight: 900;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.pts-main-num {
+  display: block;
+  text-align: center;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+.champion-pts {
+  color: #ffd257;
+  text-shadow: 0 0 12px rgba(255, 210, 87, 0.4);
+}
+
+.pts-speed-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  display: block;
+  text-align: center;
+  width: 100%;
+  margin-top: 2px;
+  letter-spacing: 0.2px;
+}
+
+.pts-speed-sub.gold {
+  color: #ffd257;
+  font-weight: 600;
 }
 
 .pod-p-status {

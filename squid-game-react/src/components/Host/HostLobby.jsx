@@ -341,7 +341,9 @@ export default function HostLobby({ roomCode, joinURL, onStart }) {
                 <span>START ARENA · {totalCount} PLAYING</span>
               </>
             ) : (
-              <span>WAITING FOR PLAYERS ({totalCount}/{MIN_PLAYERS})…</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                ● WAITING FOR PLAYERS ({totalCount}/{MIN_PLAYERS})
+              </span>
             )}
           </button>
         </div>

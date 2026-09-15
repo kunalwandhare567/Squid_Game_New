@@ -5,13 +5,13 @@
 
 export const BASE_POINTS            = 2;
 export const SPEED_BONUS_MAX        = 3;
-export const BONUS_WINDOW_MS        = 15000; // 15s window (10s green + 5s blink)
+export const BONUS_WINDOW_MS        = 12000; // 12s window (7s green + 5s blink)
 export const ELIM_RATIO             = 4;      // bottom 1-in-4 eliminated
 export const CONSECUTIVE_WRONG_LIMIT = 3;     // 3 consecutive wrong = eliminate
 export const MIN_PLAYERS            = 5;      // min 5 players to start
 export const MAX_PLAYERS            = 15;     // max 15 active players
 export const ROUNDS                 = 10;
-export const GREEN_DURATION_SECS    = 15;     // 15s question countdown (10s green + 5s blink)
+export const GREEN_DURATION_SECS    = 12;     // 12s question countdown (7s green + 5s blink)
 export const GRACE_PERIOD_MS        = 1200;   // wait after lock before reading answers
 export const ANSWER_FRAC            = 0.60;   // 60% must answer before red arms
 
@@ -63,9 +63,16 @@ export function computeRoundScore(answer, questionOrCorrect, greenStartAt) {
     }
   }
 
-  const speedMs = (answer.submittedAt && greenStartAt)
-    ? Math.max(0, answer.submittedAt - greenStartAt)
-    : null;
+  let speedMs = null;
+  if (answer.submittedAt && greenStartAt) {
+    const submittedTime = typeof answer.submittedAt === 'number'
+      ? answer.submittedAt
+      : new Date(answer.submittedAt).getTime();
+    if (!isNaN(submittedTime) && !isNaN(greenStartAt)) {
+      const rawDiff = submittedTime - greenStartAt;
+      speedMs = Math.max(50, Math.round(rawDiff));
+    }
+  }
 
   return { points: correct ? 2 : 0, correct, speedMs };
 }
@@ -123,18 +130,29 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
 
     const prevCorrect  = Number(player.totalCorrect ?? player.total_correct ?? player.correctCount ?? player.correct_count ?? 0);
     const newCorrect   = correct ? prevCorrect + 1 : prevCorrect;
-    const roundSpeedMs = (speedMs != null && !isNaN(speedMs)) ? speedMs : 15000;
+
+    // Track real response times in ms without hardcoded 15s default
     const prevTotalSpeedMs = Number(player.totalSpeedMs ?? player.total_speed_ms ?? 0);
-    const newTotalSpeedMs  = prevTotalSpeedMs + roundSpeedMs;
+    const prevAnsweredRounds = Number(player.answeredRounds ?? player.answered_rounds ?? (prevTotalSpeedMs > 0 ? (player.roundsPlayed || 1) : 0));
+    
+    let newTotalSpeedMs = prevTotalSpeedMs;
+    let newAnsweredRounds = prevAnsweredRounds;
+    let newAvgSpeedMs = player.avgSpeedMs ?? player.avg_speed_ms ?? null;
+
+    if (speedMs != null && !isNaN(speedMs)) {
+      newTotalSpeedMs += speedMs;
+      newAnsweredRounds += 1;
+      newAvgSpeedMs = Math.round(newTotalSpeedMs / newAnsweredRounds);
+    }
+
     const prevRounds   = Number(player.roundsPlayed ?? player.rounds_played ?? 0);
     const newRounds    = prevRounds + 1;
-    const newAvgSpeedMs = Math.round(newTotalSpeedMs / newRounds);
 
     playerStates[player.id].consecutiveWrong  = newConsec;
     playerStates[player.id].consecutive_wrong = newConsec;
     playerStates[player.id].totalStrikes      = newTotalStrikes;
     playerStates[player.id].total_strikes     = newTotalStrikes;
-    playerStates[player.id].strikes           = newTotalStrikes; // Supabase 'strikes' column stores cumulative total strikes
+    playerStates[player.id].strikes           = newTotalStrikes;
     playerStates[player.id].score             = newScore;
     playerStates[player.id].totalCorrect      = newCorrect;
     playerStates[player.id].total_correct     = newCorrect;
@@ -142,7 +160,10 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
     playerStates[player.id].correct_count     = newCorrect;
     playerStates[player.id].roundsPlayed      = newRounds;
     playerStates[player.id].rounds_played     = newRounds;
+    playerStates[player.id].answeredRounds    = newAnsweredRounds;
+    playerStates[player.id].answered_rounds   = newAnsweredRounds;
     playerStates[player.id].lastSpeedMs       = speedMs;
+    playerStates[player.id].last_speed_ms     = speedMs;
     playerStates[player.id].totalSpeedMs      = newTotalSpeedMs;
     playerStates[player.id].total_speed_ms    = newTotalSpeedMs;
     playerStates[player.id].avgSpeedMs        = newAvgSpeedMs;
@@ -155,6 +176,7 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
       lastSpeedMs:      speedMs,
       totalSpeedMs:     newTotalSpeedMs,
       avgSpeedMs:       newAvgSpeedMs,
+      answeredRounds:   newAnsweredRounds,
       ddUsed: false,
       shieldActive: false,
       consecutiveWrong: newConsec,
@@ -202,7 +224,7 @@ export function resolveRound(players, answers, questionOrId, greenStartAt) {
  * Authoritative leaderboard sorting:
  * 1. Alive survivors always rank higher than eliminated players
  * 2. Higher total score
- * 3. Fastest cumulative response speed (tiebreaker)
+ * 3. Fastest average response speed in ms (lower ms wins)
  * 4. Lowest consecutive wrong answers (tiebreaker)
  * 5. Earliest join order (tiebreaker)
  */
@@ -212,9 +234,9 @@ export function rankPlayers(players) {
     .map(p => ({
       ...p,
       score: Number(p.score) || 0,
-      totalSpeedMs: Number(p.totalSpeedMs ?? p.total_speed_ms ?? 999999),
-      avgSpeedMs: Number(p.avgSpeedMs ?? p.avg_speed_ms ?? 15000),
-      lastSpeedMs: p.lastSpeedMs != null ? Number(p.lastSpeedMs) : null,
+      totalSpeedMs: p.totalSpeedMs != null ? Number(p.totalSpeedMs) : (p.total_speed_ms != null ? Number(p.total_speed_ms) : null),
+      avgSpeedMs: p.avgSpeedMs != null ? Number(p.avgSpeedMs) : (p.avg_speed_ms != null ? Number(p.avg_speed_ms) : null),
+      lastSpeedMs: p.lastSpeedMs != null ? Number(p.lastSpeedMs) : (p.last_speed_ms != null ? Number(p.last_speed_ms) : null),
       totalStrikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
       strikes: Number(p.totalStrikes ?? p.total_strikes ?? p.strikes ?? 0),
       totalCorrect: Number(p.totalCorrect ?? p.total_correct ?? p.correctCount ?? p.correct_count ?? 0),
@@ -225,10 +247,21 @@ export function rankPlayers(players) {
     }));
 
   return list.sort((a, b) => {
+    // 1. Alive survivors rank first
     if (a.alive !== b.alive) return a.alive ? -1 : 1;
+    // 2. Highest Score
     if (b.score !== a.score) return b.score - a.score;
-    if (a.totalSpeedMs !== b.totalSpeedMs) return a.totalSpeedMs - b.totalSpeedMs;
+    // 3. Fastest response speed in ms (lower ms is better)
+    const aSpeed = a.avgSpeedMs ?? a.totalSpeedMs;
+    const bSpeed = b.avgSpeedMs ?? b.totalSpeedMs;
+    if (aSpeed != null && bSpeed != null && aSpeed !== bSpeed) {
+      return aSpeed - bSpeed;
+    }
+    if (aSpeed != null && bSpeed == null) return -1;
+    if (aSpeed == null && bSpeed != null) return 1;
+    // 4. Fewest consecutive wrong answers
     if (a.consecutiveWrong !== b.consecutiveWrong) return a.consecutiveWrong - b.consecutiveWrong;
+    // 5. Join order
     return a.joinOrder - b.joinOrder;
   });
 }

@@ -274,7 +274,7 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
 
       <input
         className="name-input"
-        placeholder="Your name (max 14 chars)"
+        placeholder="Enter your name…"
         maxLength={14}
         value={name}
         onChange={e => setName(e.target.value)}

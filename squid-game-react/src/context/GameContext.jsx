@@ -75,8 +75,11 @@ export function GameProvider({ roomCode, children }) {
           .eq('room_code', roomCode);
 
         if (playersList && isMounted) {
+          const statsMap = roomData?.meta?.playerStats || {};
           const pMap = {};
           playersList.forEach(p => {
+            const cached = playersCache.current?.[p.player_id] || {};
+            const stats = statsMap[p.player_id] || {};
             pMap[p.player_id] = {
               id: p.player_id,
               name: p.name,
@@ -91,6 +94,12 @@ export function GameProvider({ roomCode, children }) {
               dd: p.dd,
               joinOrder: p.join_order,
               bot: p.bot,
+              avgSpeedMs: stats.avgSpeedMs ?? cached.avgSpeedMs ?? null,
+              totalSpeedMs: stats.totalSpeedMs ?? cached.totalSpeedMs ?? null,
+              lastSpeedMs: stats.lastSpeedMs ?? cached.lastSpeedMs ?? null,
+              answeredRounds: stats.answeredRounds ?? cached.answeredRounds ?? 0,
+              roundsPlayed: stats.roundsPlayed ?? cached.roundsPlayed ?? 0,
+              totalCorrect: stats.totalCorrect ?? cached.totalCorrect ?? 0,
             };
           });
           playersCache.current = pMap;
@@ -131,6 +140,25 @@ export function GameProvider({ roomCode, children }) {
           };
           dispatch({ type: 'SET_META', payload: metaObj });
           dispatch({ type: 'SET_QUESTION', payload: row.question || row.meta?.question || null });
+
+          if (row.meta?.playerStats) {
+            const statsMap = row.meta.playerStats;
+            const current = { ...playersCache.current };
+            let hasChanges = false;
+            Object.keys(statsMap).forEach(pid => {
+              if (current[pid]) {
+                current[pid] = {
+                  ...current[pid],
+                  ...statsMap[pid],
+                };
+                hasChanges = true;
+              }
+            });
+            if (hasChanges) {
+              playersCache.current = current;
+              dispatch({ type: 'SET_PLAYERS', payload: current });
+            }
+          }
         }
       )
       .on(
@@ -146,6 +174,7 @@ export function GameProvider({ roomCode, children }) {
             if (eventType === 'DELETE' && oldRow?.player_id) {
               delete current[oldRow.player_id];
             } else if (newRow?.player_id) {
+              const prev = current[newRow.player_id] || {};
               current[newRow.player_id] = {
                 id: newRow.player_id,
                 name: newRow.name,
@@ -160,6 +189,12 @@ export function GameProvider({ roomCode, children }) {
                 dd: newRow.dd,
                 joinOrder: newRow.join_order,
                 bot: newRow.bot,
+                avgSpeedMs: prev.avgSpeedMs ?? null,
+                totalSpeedMs: prev.totalSpeedMs ?? null,
+                lastSpeedMs: prev.lastSpeedMs ?? null,
+                answeredRounds: prev.answeredRounds ?? 0,
+                roundsPlayed: prev.roundsPlayed ?? 0,
+                totalCorrect: prev.totalCorrect ?? 0,
               };
             }
             playersCache.current = current;

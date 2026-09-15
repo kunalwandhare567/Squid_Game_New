@@ -28,7 +28,7 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
   const consecutiveStrikes = Number(me?.consecutiveWrong ?? me?.consecutive_wrong ?? 0);
   const finalScore         = Number(me?.score || 0);
   const avgSpeedMs         = Number(me?.avgSpeedMs ?? me?.avg_speed_ms ?? 0);
-  const avgSpeedSec        = avgSpeedMs > 0 ? (avgSpeedMs / 1000).toFixed(1) : '--';
+  const avgSpeedSec        = avgSpeedMs > 0 ? (avgSpeedMs / 1000).toFixed(2) : '--';
 
   // Tracked rounds played (default to totalRounds for survivors, or capped for eliminated)
   const roundsPlayed = Number(
@@ -201,8 +201,8 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
 
           <div className="stat-metric-card">
             <span className="stat-icon">⚡</span>
-            <div className="stat-val">{avgSpeedSec}s</div>
-            <div className="stat-lbl">AVG TIME</div>
+            <div className="stat-val">{avgSpeedMs > 0 ? `${avgSpeedSec}s` : '--'}</div>
+            <div className="stat-lbl">{avgSpeedMs > 0 ? `${avgSpeedMs}ms AVG` : 'AVG TIME'}</div>
           </div>
         </section>
 
@@ -223,6 +223,9 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
               const rankNum = idx + 1;
               const isCurrent = p.id === (me?.id || pid);
               const medalEmoji = rankNum === 1 ? '🥇' : rankNum === 2 ? '🥈' : rankNum === 3 ? '🥉' : `#${rankNum}`;
+              const pSpeed = p.avgSpeedMs
+                ? `${(p.avgSpeedMs / 1000).toFixed(2)}s (${p.avgSpeedMs}ms)`
+                : null;
 
               return (
                 <div
@@ -235,8 +238,13 @@ export default function PlayerEnd({ me, players = {}, totalRounds = 10, pid }) {
                     <span className="lb-name-txt">{p.name}</span>
                     {isCurrent && <span className="lb-you-tag">YOU</span>}
                   </div>
-                  <div className="lb-score-col">
+                  <div className="lb-score-col" style={{ textAlign: 'right' }}>
                     <strong>{p.score || 0}</strong> pts
+                    {pSpeed && (
+                      <span style={{ display: 'block', fontSize: '11px', color: '#38bdf8', marginTop: '1px' }}>
+                        ⚡ {pSpeed}
+                      </span>
+                    )}
                   </div>
                 </div>
               );

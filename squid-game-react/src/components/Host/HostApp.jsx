@@ -63,6 +63,8 @@ function HostController({ roomCode }) {
 
   const lockGuard = useRef(false); // prevents double-lockIn
   const answersRef= useRef({});
+  const greenStartAtRef = useRef(0);
+  const playerStatsRef  = useRef({});
   const botSeq    = useRef(0);
   const botIds    = useRef(new Set());
 
@@ -81,6 +83,7 @@ function HostController({ roomCode }) {
           hostAlive: true,
           maxPlayers: MAX_PLAYERS,
           minPlayers: MIN_PLAYERS,
+          playerStats: {},
         },
         started_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -116,23 +119,24 @@ function HostController({ roomCode }) {
           });
           dispatch({ type: 'SET_ANSWERS', payload: { ...answersRef.current } });
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error('Error fetching initial answers:', err);
+      }
     }
     fetchInitialAnswers();
 
     const channel = supabase
-      .channel(`answers-${roomCode}-${rkey}-${Date.now()}`)
+      .channel(`live-answers-${roomCode}-${rkey}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'answers', filter: `room_code=eq.${roomCode}` },
         payload => {
-          const row = payload.new;
-          if (row && row.round_key === rkey) {
-            answersRef.current[row.player_id] = {
-              choiceId: row.choice_id,
-              submittedAt: row.submitted_at ? new Date(row.submitted_at).getTime() : Date.now(),
-              shieldOn: !!row.shield_on,
-              ddOn: !!row.dd_on,
+          if (payload.new && payload.new.round_key === rkey) {
+            answersRef.current[payload.new.player_id] = {
+              choiceId: payload.new.choice_id,
+              submittedAt: payload.new.submitted_at ? new Date(payload.new.submitted_at).getTime() : Date.now(),
+              shieldOn: !!payload.new.shield_on,
+              ddOn: !!payload.new.dd_on,
             };
             dispatch({ type: 'SET_ANSWERS', payload: { ...answersRef.current } });
           }
@@ -145,25 +149,14 @@ function HostController({ roomCode }) {
     };
   }, [phase, roundIndex, roomCode]);
 
-  // ── Helper: get players as array ──────────────────────────────────────
-  const getPlayers = useCallback((filter = 'alive') => {
-    const all = Object.entries(state.players || {}).map(([id, p]) => ({ id, ...p }));
-    if (filter === 'alive')    return all.filter(p => p.alive && !p.spectator);
-    if (filter === 'dead')     return all.filter(p => !p.alive && !p.spectator);
-    if (filter === 'all')      return all;
-    return all;
-  }, [state.players]);
-
-  // ── Bots ──────────────────────────────────────────────────────────────
-  async function addBot() {
-    const n  = botSeq.current++;
-    const id = `bot_${n}`;
-    botIds.current.add(id);
-    const rec = {
+  // ── Add Bot ───────────────────────────────────────────────────────────
+  async function handleAddBot() {
+    const idx = botSeq.current++;
+    const bot = {
       room_code: roomCode,
-      player_id: id,
-      name: BOT_NAMES[n % BOT_NAMES.length] + '_Bot',
-      emoji: EMOJIS[n % EMOJIS.length],
+      player_id: `bot_${idx}`,
+      name: BOT_NAMES[idx % BOT_NAMES.length],
+      emoji: BOT_EMOJIS[idx % BOT_EMOJIS.length],
       alive: true,
       spectator: false,
       score: 0,
@@ -171,20 +164,37 @@ function HostController({ roomCode }) {
       consecutive_wrong: 0,
       shield: 1,
       dd: 1,
-      join_order: 99 + n,
+      join_order: 99,
       bot: true,
     };
-    await supabase.from('players').upsert(rec);
-    setBotCount(c => c + 1);
+    botIds.current.add(bot.player_id);
+    setBotCount(botIds.current.size);
+    await supabase.from('players').upsert(bot);
   }
 
-  async function removeBot() {
-    const ids = [...botIds.current];
-    if (!ids.length) return;
-    const id = ids[ids.length - 1];
-    botIds.current.delete(id);
-    await supabase.from('players').delete().eq('room_code', roomCode).eq('player_id', id);
-    setBotCount(c => Math.max(0, c - 1));
+  // ── Kick Bot ──────────────────────────────────────────────────────────
+  async function handleKickBot(botId) {
+    botIds.current.delete(botId);
+    setBotCount(botIds.current.size);
+    await supabase.from('players').delete().eq('player_id', botId).eq('room_code', roomCode);
+  }
+
+  // ── Kick Player ───────────────────────────────────────────────────────
+  async function handleKickPlayer(playerId) {
+    if (botIds.current.has(playerId)) {
+      botIds.current.delete(playerId);
+      setBotCount(botIds.current.size);
+    }
+    await supabase.from('players').delete().eq('player_id', playerId).eq('room_code', roomCode);
+  }
+
+  // ── Helper: players list ──────────────────────────────────────────────
+  function getPlayers(filter = 'all') {
+    const list = Object.values(state.players || {}).filter(p => !p.spectator);
+    if (filter === 'alive')      return list.filter(p => p.alive);
+    if (filter === 'eliminated') return list.filter(p => !p.alive);
+    if (filter === 'dead')       return list.filter(p => !p.alive);
+    return list;
   }
 
   // ── Start game ────────────────────────────────────────────────────────
@@ -195,7 +205,7 @@ function HostController({ roomCode }) {
     await beginRound(qs, 0);
   }
 
-  // ── Begin a round ─────────────────────────────────────────────────────
+  // ── Begin a round ────────────────────────────────────────────────     async function beginRound(qs, idx) {
   async function beginRound(qs, idx) {
     lockGuard.current = false;
     const q    = qs[idx];
@@ -207,6 +217,7 @@ function HostController({ roomCode }) {
 
     const nowIso = new Date().toISOString();
     const nowMs = Date.now();
+    greenStartAtRef.current = nowMs;
     setGreenStartAt(nowMs);
 
     // Update room in Supabase (WITHOUT correctId for anti-cheat)
@@ -230,6 +241,7 @@ function HostController({ roomCode }) {
         minPlayers: MIN_PLAYERS,
         phase: 'question',
         startedAt: nowMs,
+        playerStats: playerStatsRef.current,
       },
       started_at: nowIso,
       updated_at: nowIso,
@@ -238,12 +250,12 @@ function HostController({ roomCode }) {
     audio.say(q.text);
     audio.startBeat(GREEN_DURATION_SECS * 1000);
 
-    // Schedule bot answers
-    scheduleBots(q, rkey);
+    // Schedule bot answers with realistic timings
+    scheduleBots(q, rkey, nowMs);
   }
 
   // ── Schedule bot answers ──────────────────────────────────────────────
-  function scheduleBots(q, rkey) {
+  function scheduleBots(q, rkey, startMs) {
     const bots = [...botIds.current]
       .filter(id => {
         const p = state.players[id];
@@ -251,16 +263,19 @@ function HostController({ roomCode }) {
       });
 
     bots.forEach(id => {
-      const delay    = 800 + Math.random() * 7000;
+      const delay    = Math.round(1200 + Math.random() * 5500);
       const accuracy = 0.82 - roundIndex * 0.04;
       setTimeout(async () => {
         const p = state.players?.[id];
-        if (!p) return;
+        if (!p || !p.alive) return;
         const correct = Math.random() < accuracy;
         const allKeys = Object.keys(q.options);
         const choice  = correct
           ? q.correctId
-          : allKeys.filter(k => k !== q.correctId)[Math.floor(Math.random() * 3)];
+          : allKeys.filter(k => k !== q.correctId)[Math.floor(Math.random() * (allKeys.length - 1))];
+
+        const baseStart = greenStartAtRef.current || startMs || Date.now();
+        const submittedMs = baseStart + delay;
 
         await supabase.from('answers').upsert({
           room_code: roomCode,
@@ -269,7 +284,7 @@ function HostController({ roomCode }) {
           choice_id: choice,
           shield_on: false,
           dd_on: false,
-          submitted_at: new Date().toISOString(),
+          submitted_at: new Date(submittedMs).toISOString(),
         });
       }, delay);
     });
@@ -314,7 +329,7 @@ function HostController({ roomCode }) {
 
     const q = gameQuestions[roundIndex];
     await doResolve(answers, q);
-  }, [lockGuard, roundIndex, gameQuestions, roomCode, greenStartAt]);
+  }, [lockGuard, roundIndex, gameQuestions, roomCode]);
 
   // ── Batch player updates with retry for bulletproof live event stability ───
   async function batchUpdatePlayerStates(playerList) {
@@ -359,12 +374,33 @@ function HostController({ roomCode }) {
 
   // ── Resolve normal round ──────────────────────────────────────────────
   async function doResolve(answers, q) {
-    const alivePlayers = getPlayers('alive');
+    const roundStart = greenStartAtRef.current || greenStartAt || Date.now();
+    const alivePlayers = getPlayers('alive').map(p => ({
+      ...p,
+      ...(playerStatsRef.current[p.id] || {}),
+    }));
+
     const { results, eliminations, survivors, newPlayerStates } =
-      resolveRound(alivePlayers, answers, q, greenStartAt);
+      resolveRound(alivePlayers, answers, q, roundStart);
+
+    // Save exact calculated speed stats into playerStatsRef
+    Object.values(newPlayerStates).forEach(ps => {
+      playerStatsRef.current[ps.id] = {
+        avgSpeedMs: ps.avgSpeedMs,
+        totalSpeedMs: ps.totalSpeedMs,
+        lastSpeedMs: ps.lastSpeedMs,
+        answeredRounds: ps.answeredRounds,
+        roundsPlayed: ps.roundsPlayed,
+        totalCorrect: ps.totalCorrect,
+        score: ps.score,
+      };
+    });
 
     // Immediately update local GameContext players state so Host UI is 100% real-time
-    const mergedPlayers = { ...(state.players || {}), ...newPlayerStates };
+    const mergedPlayers = { ...(state.players || {}) };
+    Object.values(newPlayerStates).forEach(ps => {
+      mergedPlayers[ps.id] = { ...(mergedPlayers[ps.id] || {}), ...ps };
+    });
     if (dispatch) {
       dispatch({ type: 'SET_PLAYERS', payload: mergedPlayers });
     }
@@ -375,7 +411,7 @@ function HostController({ roomCode }) {
     setRevealData({ results, eliminations, survivors, question: q, answers });
     setPhase('reveal');
 
-    // Reveal correctId, correctAnswer, and change phase
+    // Reveal correctId, correctAnswer, and change phase + persist playerStats in meta
     try {
       await supabase.from('rooms').update({
         phase: 'reveal',
@@ -396,6 +432,7 @@ function HostController({ roomCode }) {
           hostAlive: true,
           maxPlayers: MAX_PLAYERS,
           minPlayers: MIN_PLAYERS,
+          playerStats: playerStatsRef.current,
         },
         updated_at: new Date().toISOString(),
       }).eq('room_code', roomCode);
@@ -420,6 +457,7 @@ function HostController({ roomCode }) {
           roomCode,
           totalRounds: ROUNDS,
           roundsPlayed: ROUNDS,
+          playerStats: playerStatsRef.current,
         },
         updated_at: new Date().toISOString(),
       }).eq('room_code', roomCode);

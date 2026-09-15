@@ -66,7 +66,7 @@ export function sfxWin() {
   notes.forEach((f, i) => setTimeout(() => beep(f, 0.3, 0.2, 'triangle'), i * 120));
 }
 
-export function startBeat(windowMs = 15000) {
+export function startBeat(windowMs = 12000) {
   stopBeat();
   motifIndex = 0;
   const startTime = Date.now();

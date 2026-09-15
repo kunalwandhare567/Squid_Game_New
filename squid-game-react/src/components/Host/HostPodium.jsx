@@ -120,7 +120,7 @@ export default function HostPodium({ players, onRestart }) {
                 <div className="pod-p-score">
                   {second.score} PTS
                   <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
-                    ⚡ {second.avgSpeedMs ? (second.avgSpeedMs / 1000).toFixed(1) : '--'}s avg
+                    ⚡ {second.avgSpeedMs ? `${(second.avgSpeedMs / 1000).toFixed(2)}s avg (${second.avgSpeedMs}ms)` : '--'}
                   </span>
                 </div>
                 <span className={`pod-p-status ${second.alive ? 'status-safe' : 'status-elim'}`}>
@@ -149,7 +149,7 @@ export default function HostPodium({ players, onRestart }) {
                 <div className="pod-p-score champion-score">
                   {first.score} PTS
                   <span style={{ fontSize: '11px', color: '#ffd257', display: 'block', marginTop: '2px', fontWeight: 600 }}>
-                    ⚡ {first.avgSpeedMs ? (first.avgSpeedMs / 1000).toFixed(1) : '--'}s avg
+                    ⚡ {first.avgSpeedMs ? `${(first.avgSpeedMs / 1000).toFixed(2)}s avg (${first.avgSpeedMs}ms)` : '--'}
                   </span>
                 </div>
                 <span className="pod-p-status status-champion">
@@ -175,7 +175,7 @@ export default function HostPodium({ players, onRestart }) {
                 <div className="pod-p-score">
                   {third.score} PTS
                   <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
-                    ⚡ {third.avgSpeedMs ? (third.avgSpeedMs / 1000).toFixed(1) : '--'}s avg
+                    ⚡ {third.avgSpeedMs ? `${(third.avgSpeedMs / 1000).toFixed(2)}s avg (${third.avgSpeedMs}ms)` : '--'}
                   </span>
                 </div>
                 <span className={`pod-p-status ${third.alive ? 'status-safe' : 'status-elim'}`}>
@@ -255,7 +255,9 @@ export default function HostPodium({ players, onRestart }) {
                   const isTop2  = rankNum === 2;
                   const isTop3  = rankNum === 3;
                   const strikes = p.consecutiveWrong ?? p.consecutive_wrong ?? 0;
-                  const avgSpeedSec = p.avgSpeedMs ? (p.avgSpeedMs / 1000).toFixed(1) : '--';
+                  const avgSpeedDisplay = p.avgSpeedMs
+                    ? `${(p.avgSpeedMs / 1000).toFixed(2)}s (${p.avgSpeedMs}ms)`
+                    : '--';
 
                   return (
                     <tr
@@ -289,7 +291,7 @@ export default function HostPodium({ players, onRestart }) {
 
                       <td className="td-speed" style={{ textAlign: 'center' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '13px', color: '#38bdf8', fontWeight: 700 }}>
-                          ⚡ {avgSpeedSec}s
+                          ⚡ {avgSpeedDisplay}
                         </span>
                       </td>
 

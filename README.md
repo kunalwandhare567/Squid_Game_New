@@ -5,77 +5,83 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Realtime_Postgres-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-> A high-stakes, real-time multiplayer AI trivia battle inspired by *Squid Game's "Red Light, Green Light"*. Built for live interactive events, hackathons, and classroom competitions.
+> A high-stakes, real-time multiplayer AI trivia battle inspired by *Squid Game's "Red Light, Green Light"*. Built for live interactive expos, tech hackathons, and classroom competitions.
 
 ---
 
 ## 🎮 Overview
 
-**IAE Squid Game** transforms standard trivia into an adrenaline-pumping survival game. Players scan a dynamically generated QR code on the host's projector screen to join a live room. During each round, questions flash on the screen as players race against the clock to lock in their answers before the timer runs out. 
+**IAE Squid Game** transforms trivia competitions into an interactive survival tournament. Players scan a dynamically generated QR code on the host's screen or projector to enter a live multiplayer lobby. During each round, questions flash on the screen as players race against the clock to lock in their answers before the timer runs out.
 
-Wrong answers or running out of time during **Red Light** result in instant elimination! Surviving players advance until the final victor claims the grand prize on the champion podium.
+Wrong answers or failing to lock in before **Red Light** drops cause strikes. 3 consecutive strikes result in permanent elimination! Surviving players advance across 10 rounds until the final champion is crowned on the podium.
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features & Gameplay Mechanics
+
+- ⏱️ **12-Second High-Tension Round Loop**:
+  - **0s – 7s**: Solid **Green Light** — contestants read the question and tap their answer.
+  - **7s – 12s (5 seconds)**: Escalating **Blinking Warning** — rapid amber/red flickers with accelerating procedural synth heartbeat.
+  - **12s Mark**: **Hard Stop / Red Light** — answers lock immediately; unanswered players receive a strike.
+
+- ⚡ **Precision Response Time in Milliseconds (ms)**:
+  - Exact response speed is tracked in milliseconds for every contestant on every round (`speedMs = submittedAt - greenStartAt`).
+  - Displays formatted average response times (e.g., `⚡ 2.45s avg (2450ms)`) on the Host podium and personal Player Scorecards.
+  - Primary tiebreaker: If players tie on points, the player with the faster average response time wins!
+
+- 🏆 **Authoritative Winner Determination & Dynamic Ranking**:
+  1. **Survival Status**: Alive survivors always rank higher than eliminated contestants.
+  2. **Total Score**: Higher accumulated points.
+  3. **Response Speed**: Fastest cumulative and average response time in ms (lower ms wins).
+  4. **Fewest Strikes**: Lowest consecutive wrong answers.
+  5. **Join Order**: Earliest room entry tiebreaker.
 
 - 📺 **Host & Projector Screen (`?host=true`)**:
-  - Full-screen real-time dashboard designed for stage projectors and big displays.
-  - Live player lobby with dynamic 4-letter room codes & QR code generation.
-  - Automated or manual game loop control (Start Game, Question Countdown, Answer Reveal, Leaderboard/Podium).
-  - Cinematic Squid Game visual effects, countdown timers, and animated transitions.
+  - Full-screen cinematic dashboard designed for stage projectors and large displays.
+  - Dynamic 4-letter Room Code generation with integrated QR code for instant mobile joins.
+  - 15-player live grid showing joined players, ready status, and AI bot fillers.
+  - Automated question timer, animated answer reveal, dynamic live scoreboard track, and 3D celebratory podium with confetti.
 
-- 📱 **Mobile-Optimized Player Interface (`?room=ABCD`)**:
-  - Frictionless join flow: scan the QR code or enter a 4-letter room code with a nickname.
-  - Instant tactile feedback for answer submission.
-  - Real-time verdict screens (Pass, Eliminated, Revival).
-  - Spectator mode for eliminated players so they can continue following the live game.
+- 📱 **Mobile Player Interface (`?room=ABCD`)**:
+  - Seamless mobile UI with randomized option layouts to prevent screen peeking.
+  - Haptic-feel instant button feedback, countdown timer rings, and strike alert banners.
+  - Post-match personalized scorecard with rank tiers (Gold, Silver, Bronze, Top 5, Survivor), correct answer tallies, and expandable full leaderboard drawer.
 
-- 🧠 **150+ Curated AI & Tech Questions**:
-  - Built-in comprehensive question bank spanning:
-    - **Basic AI & Machine Learning**
-    - **Generative AI & Large Language Models (LLMs)**
-    - **AI Ethics & Safety**
-    - **Cloud, Systems & Modern Tech**
-  - Includes full explanations ("Why?") shown after every round.
+- 🔒 **Fair Play & Anti-Cheat System**:
+  - `correctId` is hidden from the room document until the Host triggers the reveal phase.
+  - Device completion tracking with 1 match/day policy and Host passkey unlock system.
 
-- ⚡ **Real-Time Synchronization**:
-  - Powered by **Supabase Realtime (PostgreSQL)** for sub-second synchronization between Host and dozens of concurrent mobile players.
+- 🧠 **Curated AI & Technology Question Bank**:
+  - 400+ questions covering Generative AI, Large Language Models (LLMs), Machine Learning fundamentals, AI Ethics, Cloud, and Systems.
+  - Comprehensive explanations ("Why?") revealed after every round.
 
-- 🎵 **Procedural Web Audio Synthesizer**:
-  - Built-in sound engine powered by the Web Audio API (no external sound file dependencies required).
-  - Custom 8-bit / arcade sounds for countdown beeps, correct chimes, elimination buzzer, suspense drone, and victory fanfare.
-
-- 🔄 **Revival & Elimination Mechanics**:
-  - High-intensity survival rules engine with customizable elimination thresholds.
-  - Sudden-death revival rounds to give eliminated players one last chance to rejoin.
-
-- 🏆 **Podium & Confetti Celebration**:
-  - Dynamic victory ceremony featuring gold, silver, and bronze rankings with celebratory confetti particle animations.
+- 🎵 **Procedural Web Audio Engine**:
+  - Native HTML5 Web Audio API synthesizer — zero audio file dependencies.
+  - Custom 8-bit soundscapes: escalating tempo beat, red light buzzers, elimination cues, victory fanfare, and speech synthesis.
 
 ---
 
-## 🛠️ Tech Stack & Requirements
+## 🛠️ Tech Stack
 
 | Layer | Technology |
 |---|---|
 | **Frontend Framework** | React 19 + Vite |
 | **Styling** | Custom Vanilla CSS (Dark Cyberpunk / Squid Game Neon aesthetic) |
-| **Realtime Backend** | Supabase (PostgreSQL + Realtime Channels) |
+| **Realtime Database** | Supabase (PostgreSQL + Realtime WebSocket Channels) |
 | **Icons** | Lucide React |
 | **QR Code Engine** | `qrcode.react` |
-| **Visual Effects** | `canvas-confetti` |
-| **Audio** | Native HTML5 Web Audio API Synth Engine |
-| **Deployment** | Netlify / Vercel / Cloudflare Pages |
+| **Visual Effects** | `canvas-confetti` + Ambient CSS Keyframe Animations |
+| **Audio Engine** | Web Audio API Synthesizer + Web Speech API |
+| **Deployment** | Vercel / Netlify / Cloudflare Pages |
 
 ---
 
-## 🗄️ Supabase Database Setup
+## 🗄️ Supabase Database Schema
 
-Run this SQL snippet in your **Supabase Project -> SQL Editor**:
+Execute this SQL schema in your **Supabase Dashboard -> SQL Editor**:
 
 ```sql
--- 1. Rooms table
+-- 1. Rooms Table
 CREATE TABLE IF NOT EXISTS rooms (
     room_code TEXT PRIMARY KEY,
     phase TEXT DEFAULT 'lobby',
@@ -86,7 +92,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Players table
+-- 2. Players Table
 CREATE TABLE IF NOT EXISTS players (
     room_code TEXT REFERENCES rooms(room_code) ON DELETE CASCADE,
     player_id TEXT NOT NULL,
@@ -105,7 +111,7 @@ CREATE TABLE IF NOT EXISTS players (
     PRIMARY KEY (room_code, player_id)
 );
 
--- 3. Answers table
+-- 3. Answers Table
 CREATE TABLE IF NOT EXISTS answers (
     room_code TEXT REFERENCES rooms(room_code) ON DELETE CASCADE,
     round_key TEXT NOT NULL,
@@ -117,18 +123,13 @@ CREATE TABLE IF NOT EXISTS answers (
     PRIMARY KEY (room_code, round_key, player_id)
 );
 
--- 4. Enable Row Level Security (RLS) policies for multiplayer access
+-- 4. Enable Row Level Security (RLS)
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read on rooms" ON rooms FOR SELECT USING (true);
 CREATE POLICY "Allow public all on rooms" ON rooms FOR ALL USING (true) WITH CHECK (true);
-
-CREATE POLICY "Allow public read on players" ON players FOR SELECT USING (true);
 CREATE POLICY "Allow public all on players" ON players FOR ALL USING (true) WITH CHECK (true);
-
-CREATE POLICY "Allow public read on answers" ON answers FOR SELECT USING (true);
 CREATE POLICY "Allow public all on answers" ON answers FOR ALL USING (true) WITH CHECK (true);
 
 -- 5. Enable Realtime Publications
@@ -144,8 +145,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE answers;
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/kunalwandhare567/Squid_game.git
-cd Squid_game/squid-game-react
+git clone https://github.com/kunalwandhare567/Squid_Game_New.git
+cd Squid_Game_New/squid-game-react
 ```
 
 ### 2. Install Dependencies
@@ -154,16 +155,16 @@ cd Squid_game/squid-game-react
 npm install
 ```
 
-### 3. Setup Environment Variables
+### 3. Configure Environment Variables
 
-Create `.env` inside `squid-game-react/`:
+Create a `.env` file in `squid-game-react/`:
 
 ```env
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-### 4. Run Development Server
+### 4. Run Locally
 
 ```bash
 npm run dev
@@ -173,24 +174,23 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 🎯 How to Play
+## 🎯 How to Run a Match
 
-### Host Workflow
-1. Open `http://localhost:5173?host=true` on your main display.
-2. A unique 4-letter Room Code and QR Code will be generated.
-3. Wait for players to join the lobby.
-4. Click **Start Game** to trigger the countdown and begin Round 1.
-5. Control question pacing, reveal answers, view eliminations, and crown the winner on the podium!
+### Host Flow:
+1. Open `http://localhost:5173/?host=true` on the stage screen/projector.
+2. A unique 4-letter room code and QR code will appear.
+3. Wait for players to join (or add AI test bots using the Bot panel).
+4. Click **Start Arena** when ready to begin Round 1.
+5. Control round reveals, view real-time score progress, and crown the winner on the 3D podium!
 
-### Player Workflow
-1. Scan the QR code displayed on the host screen, or visit the URL and enter the 4-letter Room Code.
-2. Enter your nickname and avatar.
-3. When the question begins (**Green Light**), choose your answer before time runs out.
-4. If you answer correctly, you advance. If eliminated, fight for survival in the Revival Round!
+### Player Flow:
+1. Scan the QR code or enter the 4-letter room code from any mobile browser.
+2. Pick a name and avatar.
+3. Answer each 12-second question as fast as possible during the green phase.
+4. Check your final score, rank, and average response speed on your personal scorecard.
 
 ---
 
 ## 📜 License
 
-This project is open source and available under the [MIT License](LICENSE).
-  
+This project is licensed under the [MIT License](LICENSE).

@@ -2,7 +2,7 @@
 // replayRestrictions.js — Helpers for managing device replay limits
 // =====================================================================
 
-export const REPLAY_PASSKEY = '0507';
+export const REPLAY_PASSKEY = '4455';
 
 /**
  * Returns today's date formatted as YYYY-MM-DD in the user's local timezone.

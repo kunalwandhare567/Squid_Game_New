@@ -3,7 +3,7 @@ import { Lock, Eye, EyeOff, ArrowLeft, KeyRound, ShieldAlert } from 'lucide-reac
 import { useAudio } from '../../context/AudioContext';
 
 const getHostPassword = () => {
-  return (import.meta.env.VITE_HOST_PASSWORD || '0506').trim();
+  return (import.meta.env.VITE_HOST_PASSWORD || '8305').trim();
 };
 const AUTH_STORAGE_KEY = 'sq_host_auth_token';
 

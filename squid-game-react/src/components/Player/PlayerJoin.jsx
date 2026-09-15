@@ -13,7 +13,7 @@ export default function PlayerJoin({ roomCode, pid, onJoined }) {
   const [joining, setJoining] = useState(false);
   const [error,   setError]   = useState('');
 
-  // ── Replay Passkey State ('0507' unlock) ─────────────────────────────
+  // ── Replay Passkey State ('4455' unlock) ─────────────────────────────
   const [repeatOverride,   setRepeatOverride]   = useState(false);
   const [showPasskeyInput, setShowPasskeyInput] = useState(false);
   const [passkey,          setPasskey]          = useState('');
